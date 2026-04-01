@@ -1,0 +1,54 @@
+# ── OS Generated Files ────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ── Wails / Go Builds ─────────────────────────────────────────────────────────
+# Ignore compiled binaries and installer outputs
+build/bin/
+build/obj/
+*.exe
+*.app
+*.dmg
+*.test
+*.out
+
+# Ignore Go vendor folder (if you use go mod vendor)
+vendor/
+
+# ── Frontend (Node.js / React / Vite) ─────────────────────────────────────────
+# Ignore dependencies
+*/node_modules/
+
+# Ignore Vite production build output
+*/dist/
+
+# Ignore npm/yarn debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── Environment Variables ─────────────────────────────────────────────────────
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ── IDEs and Editors ──────────────────────────────────────────────────────────
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-base: #080a0f;
+  --color-surface: #0e1117;
+  --color-panel: #13171f;
+  --color-accent: #3d9eff;
+}
+
+body {
+  background-color: var(--color-bg-base);
+  color: #dde4f0;
+  overflow: hidden;
+}
