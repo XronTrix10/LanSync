@@ -41,7 +41,6 @@ export function TitleBar() {
       onDoubleClick={WindowToggleMaximise}
     >
       {/* ── TITLE / LOGO AREA ── */}
-      {/* ── FIX: Added mb-1.5 for Mac to perfectly align with 14px traffic lights! ── */}
       <div className={`flex items-center gap-2.5`}>
         <img
           src={logoImage}
