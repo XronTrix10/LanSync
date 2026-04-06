@@ -66,6 +66,15 @@ class MainActivity : ComponentActivity(), BridgeCallback {
     private var remoteFiles = mutableStateOf<List<com.xrontrix.lansync.ui.screens.FileInfo>>(emptyList())
     private var isLoadingFiles = mutableStateOf(false)
 
+    private fun toggleForegroundService(start: Boolean) {
+        val serviceIntent = Intent(this, LanSyncService::class.java)
+        if (start) {
+            startForegroundService(serviceIntent)
+        } else {
+            stopService(serviceIntent)
+        }
+    }
+
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) { isNetworkAvailable.value = getLocalIPAddress() != null }
         override fun onLost(network: Network) { isNetworkAvailable.value = getLocalIPAddress() != null }
@@ -166,6 +175,7 @@ class MainActivity : ComponentActivity(), BridgeCallback {
                                                 activeDeviceIP.value = req.first
                                                 prefsManager.saveRecentDevice(req.first, req.second)
                                                 recentDevicesState.value = prefsManager.getRecentDevices()
+                                                toggleForegroundService(true) // Start the Foreground Service!
                                                 incomingRequest.value = null
                                                 Toast.makeText(this@MainActivity, "Connected to ${req.second}", Toast.LENGTH_SHORT).show()
                                             },
@@ -367,6 +377,7 @@ class MainActivity : ComponentActivity(), BridgeCallback {
                         activeDeviceOS.value = os // Save it to state!
                         prefsManager.saveRecentDevice(ip, connectedDeviceName)
                         recentDevicesState.value = prefsManager.getRecentDevices()
+                        toggleForegroundService(true) // Start the Foreground Service!
                         Toast.makeText(this, "Connected securely!", Toast.LENGTH_SHORT).show()
                         onResult(true)
                     } else {
@@ -605,6 +616,7 @@ class MainActivity : ComponentActivity(), BridgeCallback {
     }
 
     private fun checkAndRequestStoragePermissions() {
+        // 1. Request All Files Access (Your existing code)
         if (!android.os.Environment.isExternalStorageManager()) {
             try {
                 val intent = android.content.Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
@@ -612,6 +624,13 @@ class MainActivity : ComponentActivity(), BridgeCallback {
                 startActivity(intent)
             } catch (e: Exception) {
                 startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+            }
+        }
+
+        // 2. Request Notification Permission for Android 13+ (Tiramisu)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
             }
         }
     }
@@ -656,6 +675,7 @@ class MainActivity : ComponentActivity(), BridgeCallback {
         runOnUiThread {
             if (activeDeviceIP.value == ip) {
                 activeDeviceIP.value = null
+                toggleForegroundService(false) // Stop the Foreground Service!
             }
             Toast.makeText(this, "Device disconnected: $ip", Toast.LENGTH_SHORT).show()
         }
