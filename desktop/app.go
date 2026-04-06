@@ -3,14 +3,17 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"lansync/internal/auth"
 	"lansync/internal/client"
 	"lansync/internal/clipboard"
+	"lansync/internal/config"
 	"lansync/internal/server"
 	"lansync/internal/sys"
 )
@@ -39,12 +42,24 @@ func (a *App) startup(ctx context.Context) {
 	go a.desktopServer.Start("34931")
 }
 
-func (a *App) RequestConnection(ip string, port string) (bool, error) {
-	return a.androidClient.RequestConnection(ip, port)
+func (a *App) RequestConnection(ip string, port string) (string, error) {
+	return a.androidClient.RequestConnection(ip, port, config.Load().DeviceName)
 }
+
 func (a *App) AcceptConnection(ip string) { a.desktopServer.ResolveConnection(ip, true) }
 func (a *App) RejectConnection(ip string) { a.desktopServer.ResolveConnection(ip, false) }
+
 func (a *App) Disconnect(ip string) {
+	token := a.sessionManager.GetOutboundToken(ip)
+	if token != "" {
+		// Fire a polite disconnect signal to the mobile device
+		go func() {
+			req, _ := http.NewRequest("POST", fmt.Sprintf("http://%s:34931/api/disconnect", ip), nil)
+			req.Header.Set("Authorization", "Bearer "+token)
+			client := http.Client{Timeout: 2 * time.Second}
+			client.Do(req)
+		}()
+	}
 	a.sessionManager.RemoveSession(ip)
 	runtime.EventsEmit(a.ctx, "connection_lost", ip)
 }
@@ -102,6 +117,19 @@ func (a *App) DownloadFile(ip string, port string, path string) (string, error) 
 	err = a.androidClient.StreamFileFromAndroid(ip, port, path, destPath)
 	return destPath, err
 }
+
+// GetDeviceName returns the current custom name for the frontend
+func (a *App) GetDeviceName() string {
+	return config.Load().DeviceName
+}
+
+// SaveDeviceName saves a new custom name and returns any errors
+func (a *App) SaveDeviceName(name string) error {
+	cfg := config.Load()
+	cfg.DeviceName = name
+	return config.Save(cfg)
+}
+
 func (a *App) DownloadFolder(ip string, port string, path string) (string, error) {
 	parentDir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
 		Title: "Select Destination",

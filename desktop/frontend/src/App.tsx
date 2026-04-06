@@ -5,7 +5,7 @@ import {
   Disconnect,
   DownloadFile,
   DownloadFolder,
-  GetHostName,
+  GetDeviceName,
   GetLocalIPs,
   GetRemoteFiles,
   GetSessionToken,
@@ -15,6 +15,7 @@ import {
   PushToAndroid,
   RejectConnection,
   RequestConnection,
+  SaveDeviceName,
   SelectDirectory,
   SelectFiles,
   ShareClipboardText,
@@ -36,7 +37,6 @@ import type {
 
 export default function App() {
   const [localIPs, setLocalIPs] = useState<string[]>(["Loading..."]);
-  const [localDeviceName, setLocalDeviceName] = useState<string>("Loading...");
   const [loading, setLoading] = useState<boolean>(false);
   const [uploading, setUploading] = useState<boolean>(false);
 
@@ -55,6 +55,20 @@ export default function App() {
     Record<string, TransferProgress>
   >({});
   const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const [showSettings, setShowSettings] = useState(false);
+  const [deviceName, setDeviceName] = useState("");
+
+  const handleSaveSettings = async () => {
+    try {
+      await SaveDeviceName(deviceName);
+      setShowSettings(false);
+      showToast("Settings saved", "success");
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to save settings", "error");
+    }
+  };
 
   // ── HYBRID DROP STATE (Cross-Platform Savior) ──
   const lastDropTime = useRef<number>(0);
@@ -84,7 +98,7 @@ export default function App() {
     }
 
     GetLocalIPs().then(setLocalIPs);
-    GetHostName().then(setLocalDeviceName);
+    GetDeviceName().then((name) => setDeviceName(name));
 
     EventsOn("transfer_progress", (progress: TransferProgress) => {
       setActiveTransfers((prev) => ({ ...prev, [progress.id]: progress }));
@@ -232,10 +246,14 @@ export default function App() {
     setLoading(true);
     try {
       const device: any = await IdentifyDevice(ipToConnect);
-      showToast(`Asking ${device.deviceName} to connect...`, "success");
+      showToast(`Asking ${device.deviceName || ipToConnect} to connect...`, "success");
 
-      const accepted = await RequestConnection(device.ip, device.port);
-      if (accepted) {
+      const connectedDeviceName = await RequestConnection(device.ip, device.port);
+
+      if (connectedDeviceName) {
+        // Overwrite the generic discovery name with the real, custom name from the handshake!
+        device.deviceName = connectedDeviceName;
+
         setDevices((prev) => {
           if (prev.some((d) => d.ip === device.ip)) return prev;
           return [...prev, device];
@@ -243,9 +261,9 @@ export default function App() {
         setActiveDeviceIP(device.ip);
         setNewDeviceIP("");
         addRecentDevice(device);
-        showToast(`Secure connection established!`, "success");
+        showToast(`Connection established with ${connectedDeviceName}!`, "success");
       } else {
-        showToast(`${device.deviceName} declined the connection`, "error");
+        showToast(`Connection was declined`, "error");
       }
     } catch (err: any) {
       showToast(err.message || String(err), "error");
@@ -491,7 +509,7 @@ export default function App() {
 
       <div className="flex flex-1 overflow-hidden min-h-0">
         <Sidebar
-          localDeviceName={localDeviceName}
+          localDeviceName={deviceName}
           localIPs={localIPs}
           devices={devices}
           activeDeviceIP={activeDeviceIP}
@@ -503,6 +521,7 @@ export default function App() {
           onNewDeviceIPChange={setNewDeviceIP}
           onConnect={connectToDevice}
           onRemoveRecent={removeRecentDevice}
+          setShowSettings={setShowSettings}
         />
 
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -526,6 +545,45 @@ export default function App() {
           <TransferDrawer transfers={activeTransfers} />
         </div>
       </div>
+
+      {/* --- SETTINGS MODAL --- */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-panel border border-gray-800 rounded-xl p-6 w-full max-w-md shadow-2xl">
+            <h2 className="text-xl font-bold text-white mb-2">Settings</h2>
+            <p className="text-sm text-gray-400 mb-6">Customize how this PC appears on your network.</p>
+
+            <div className="mb-6">
+              <label className="block text-xs font-bold text-gray-500 tracking-wider mb-2">
+                DISPLAY NAME
+              </label>
+              <input
+                type="text"
+                value={deviceName}
+                onChange={(e) => setDeviceName(e.target.value)}
+                className="w-full bg-[#0a0c10] border border-gray-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                placeholder="e.g. Sreejan's MacBook"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowSettings(false)}
+                className="px-4 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveSettings}
+                disabled={!deviceName.trim()}
+                className="px-6 py-2 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-500 disabled:opacity-50 transition-colors"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

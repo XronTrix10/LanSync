@@ -9,6 +9,8 @@ export function DownloadFile(arg1:string,arg2:string,arg3:string):Promise<string
 
 export function DownloadFolder(arg1:string,arg2:string,arg3:string):Promise<string>;
 
+export function GetDeviceName():Promise<string>;
+
 export function GetHostName():Promise<string>;
 
 export function GetLocalIPs():Promise<Array<string>>;
@@ -27,7 +29,9 @@ export function PushToAndroid(arg1:string,arg2:string,arg3:string,arg4:Array<str
 
 export function RejectConnection(arg1:string):Promise<void>;
 
-export function RequestConnection(arg1:string,arg2:string):Promise<boolean>;
+export function RequestConnection(arg1:string,arg2:string):Promise<string>;
+
+export function SaveDeviceName(arg1:string):Promise<void>;
 
 export function SelectDirectory():Promise<string>;
 

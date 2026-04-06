@@ -19,6 +19,7 @@ import (
 
 	"lansync/internal/auth"
 	"lansync/internal/clipboard"
+	"lansync/internal/config"
 	"lansync/internal/models"
 )
 
@@ -157,11 +158,11 @@ func (s *DesktopServer) handleConnect(w http.ResponseWriter, r *http.Request) {
 				}
 			}(clientIP, req.Port, req.TokenForB)
 
-			hostname, _ := os.Hostname()
+			cfg := config.Load()
 			json.NewEncoder(w).Encode(models.ConnectionResponse{
 				Accepted:   true,
 				TokenForA:  tokenForA,
-				DeviceName: hostname,
+				DeviceName: cfg.DeviceName,
 			})
 		} else {
 			json.NewEncoder(w).Encode(models.ConnectionResponse{Accepted: false})

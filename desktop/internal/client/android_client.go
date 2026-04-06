@@ -56,15 +56,14 @@ func (c *AndroidClient) IdentifyDevice(inputIP string) (models.DeviceIdentity, e
 	return models.DeviceIdentity{}, fmt.Errorf("could not reach device")
 }
 
-func (c *AndroidClient) RequestConnection(targetIP string, targetPort string) (string, error) {
+func (c *AndroidClient) RequestConnection(targetIP string, targetPort string, myDeviceName string) (string, error) {
 	tokenForB := c.sessionManager.GenerateToken()
-	hostname, _ := os.Hostname()
 
 	reqPayload := models.ConnectionRequest{
 		DeviceIdentity: models.DeviceIdentity{
 			IP:         sys.GetLocalIPs()[0],
 			Port:       "34931",
-			DeviceName: hostname,
+			DeviceName: myDeviceName, // <-- Send the explicitly passed name
 			OS:         stdruntime.GOOS,
 			Type:       "desktop",
 		},
@@ -87,12 +86,11 @@ func (c *AndroidClient) RequestConnection(targetIP string, targetPort string) (s
 		c.sessionManager.RegisterSession(targetIP, tokenForB, result.TokenForA)
 		go c.startHeartbeatLoop(targetIP, targetPort)
 
-		// Fallback just in case the PC couldn't fetch its hostname
-		name := result.DeviceName
-		if name == "" {
-			name = "Unknown PC"
+		finalName := result.DeviceName
+		if finalName == "" {
+			finalName = "Unknown Device"
 		}
-		return name, nil
+		return finalName, nil
 	}
 	return "", fmt.Errorf("connection rejected")
 }

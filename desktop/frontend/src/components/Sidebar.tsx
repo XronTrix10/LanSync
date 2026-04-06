@@ -4,6 +4,7 @@ import {
   Monitor,
   Plus,
   Server,
+  Settings,
   Smartphone,
   Wifi,
   X,
@@ -14,7 +15,7 @@ import IPInput from "./IPInput";
 
 interface Props {
   localDeviceName: string;
-  localIPs: string[]; // <-- CHANGED: Now accepts an array of IPs
+  localIPs: string[];
   devices: Device[];
   activeDeviceIP: string | null;
   recentDevices: Device[];
@@ -25,6 +26,7 @@ interface Props {
   onNewDeviceIPChange: (ip: string) => void;
   onConnect: (ip?: string) => void;
   onRemoveRecent: (ip: string) => void;
+  setShowSettings: (show: boolean) => void;
 }
 
 // ── Icons ───────────────────────────────────────────────────────────────────
@@ -50,6 +52,7 @@ export function Sidebar({
   onNewDeviceIPChange,
   onConnect,
   onRemoveRecent,
+  setShowSettings,
 }: Props) {
   // A valid IP means all 4 boxes have at least one digit in them
   const isIPComplete =
@@ -65,30 +68,34 @@ export function Sidebar({
       {/* ── Logo & IPs ── */}
       <div className="px-5 pt-5 pb-4 border-b border-[#1e2535]">
         <div
-          className="text-[14px] font-black tracking-widest mb-3 select-none truncate text-accent uppercase"
+          className="text-[14px] font-black tracking-widest mb-3 select-none truncate text-accent"
           title={localDeviceName || "My Device"}
         >
           {localDeviceName || "My Device"}
         </div>
 
-        {/* NEW: Map through the array of local IPs */}
-        <div className="flex flex-col gap-1.5">
-          {localIPs.map((ip, _index) => (
-            <div
-              key={ip}
-              className="flex items-center gap-2"
-              title={`IP: ${ip}`}
-            >
-              <span className="relative flex h-2 w-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00c9a7] opacity-50" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00c9a7]" />
-              </span>
+        <div className="flex justify-between">
+          <div className="flex flex-col gap-1.5">
+            {localIPs.map((ip, _index) => (
+              <div
+                key={ip}
+                className="flex items-center gap-2"
+                title={`IP: ${ip}`}
+              >
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00c9a7] opacity-50" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00c9a7]" />
+                </span>
 
-              <span className="text-[11px] font-mono text-[#8090a8] truncate">
-                {ip}
-              </span>
-            </div>
-          ))}
+                <span className="text-[11px] font-mono text-[#8090a8] truncate">
+                  {ip}
+                </span>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => setShowSettings(true)} className="text-gray-400 hover:text-white">
+            <Settings size={15} />
+          </button>
         </div>
       </div>
 
@@ -114,10 +121,9 @@ export function Sidebar({
                   className={`
                     group w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg
                     border transition-all duration-150 relative overflow-hidden
-                    ${
-                      isActive
-                        ? "bg-accent/8 border-accent/30"
-                        : "bg-transparent border-transparent hover:bg-panel hover:border-[#1e2535]"
+                    ${isActive
+                      ? "bg-accent/8 border-accent/30"
+                      : "bg-transparent border-transparent hover:bg-panel hover:border-[#1e2535]"
                     }
                   `}
                 >

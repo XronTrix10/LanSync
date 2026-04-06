@@ -18,6 +18,10 @@ export function DownloadFolder(arg1, arg2, arg3) {
   return window['go']['main']['App']['DownloadFolder'](arg1, arg2, arg3);
 }
 
+export function GetDeviceName() {
+  return window['go']['main']['App']['GetDeviceName']();
+}
+
 export function GetHostName() {
   return window['go']['main']['App']['GetHostName']();
 }
@@ -56,6 +60,10 @@ export function RejectConnection(arg1) {
 
 export function RequestConnection(arg1, arg2) {
   return window['go']['main']['App']['RequestConnection'](arg1, arg2);
+}
+
+export function SaveDeviceName(arg1) {
+  return window['go']['main']['App']['SaveDeviceName'](arg1);
 }
 
 export function SelectDirectory() {
