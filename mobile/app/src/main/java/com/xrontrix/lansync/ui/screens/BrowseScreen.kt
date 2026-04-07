@@ -353,8 +353,43 @@ fun BrowseScreen(
             HorizontalDivider(Modifier, DividerDefaults.Thickness, color = Panel)
 
             if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Accent) }
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Accent)
+                }
+            } else if (displayFiles.isEmpty()) {
+                // ── Centered "Modal" Empty State ──
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = Surface.copy(alpha = 0.5f),
+                        border = BorderStroke(1.dp, Panel),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(32.dp)
+                        ) {
+                            if (isSearchActive) {
+                                // Empty Search State
+                                Icon(Icons.Rounded.Search, contentDescription = null, modifier = Modifier.size(48.dp), tint = TextMuted.copy(alpha = 0.5f))
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text("No matching files found", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                            } else {
+                                // Empty Folder State
+                                Icon(Icons.Outlined.Folder, contentDescription = null, modifier = Modifier.size(48.dp), tint = Accent.copy(alpha = 0.5f))
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text("This folder is empty", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("No files yet, upload some", color = TextMuted, fontSize = 13.sp)
+                            }
+                        }
+                    }
+                }
             } else {
+                // ── Existing File List ──
                 LazyColumn(contentPadding = PaddingValues(bottom = 80.dp)) {
                     items(displayFiles) { file ->
                         val isSelected = selectedFiles.contains(file)
