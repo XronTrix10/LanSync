@@ -9,5 +9,13 @@
   "author": {
     "name": "Xron Trix",
     "email": "xrontrix@gmail.com"
+  },
+  "info": {
+    "companyName": "XronTrix",
+    "productName": "LanSync",
+    "productVersion": "1.0.1",
+    "fileVersion": "1.0.1",
+    "copyright": "Copyright 2026",
+    "comments": "Local network synchronization tool"
   }
 }

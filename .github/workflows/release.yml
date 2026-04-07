@@ -61,6 +61,20 @@ jobs:
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
+      - name: Sync Desktop & Frontend Versions
+        working-directory: ./desktop
+        run: |
+          # 1. Clean the version string (removes 'v' if present)
+          VERSION="${{ github.event.inputs.version }}"
+          CLEAN_VERSION="${VERSION#v}"
+
+          # 2. Update Wails config
+          node -e "const fs = require('fs'); const d = JSON.parse(fs.readFileSync('wails.json')); d.info.productVersion = '$CLEAN_VERSION'; d.info.fileVersion = '$CLEAN_VERSION'; fs.writeFileSync('wails.json', JSON.stringify(d, null, 2));"
+
+          # 3. Update React frontend (package.json & package-lock.json)
+          cd frontend
+          npm version $CLEAN_VERSION --no-git-tag-version --allow-same-version
+
       - name: Build Wails App
         working-directory: ./desktop
         run: wails build -platform ${{ matrix.platform }} ${{ matrix.build_flags }}
@@ -147,6 +161,22 @@ jobs:
         with:
           distribution: "zulu"
           java-version: "17"
+
+      - name: Sync Android Versions
+        working-directory: ./mobile/app
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          CLEAN_VERSION="${VERSION#v}"
+
+          # 1. Parse version into an auto-incrementing integer (1.2.3 -> 10203)
+          IFS='.' read -r major minor patch <<< "$CLEAN_VERSION"
+          VERSION_CODE=$((major * 10000 + minor * 100 + patch))
+
+          # 2. Inject the String Version Name
+          sed -i "s/versionName = \".*\"/versionName = \"$CLEAN_VERSION\"/g" build.gradle.kts
+
+          # 3. Inject the Integer Version Code
+          sed -i "s/versionCode = [0-9]*/versionCode = $VERSION_CODE/g" build.gradle.kts
 
       - name: Make Gradle executable
         working-directory: ./mobile

@@ -256,16 +256,21 @@ fun HomeScreen(
                                 Text(activeDevice.name, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                                 Text(activeDevice.ip.substringBefore(":"), color = TextMuted, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
                             }
-                            IconButton(
+                            // Disconnect button
+                            Surface(
                                 onClick = onDisconnect,
-                                modifier = Modifier.size(32.dp)
+                                color = RedAccent.copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(6.dp),
+                                modifier = Modifier.size(28.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Close,
-                                    contentDescription = "Disconnect",
-                                    tint = RedAccent,
-                                    modifier = Modifier.size(18.dp)
-                                )
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Close,
+                                        contentDescription = "Disconnect",
+                                        tint = RedAccent,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
                             }
                         }
                     }
