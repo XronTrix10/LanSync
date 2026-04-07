@@ -219,25 +219,54 @@ fun HomeScreen(
 
         if (!isNetworkAvailable) Spacer(modifier = Modifier.weight(1f)) else Spacer(modifier = Modifier.height(24.dp))
 
-        // ... Connected & Recent Devices (Unchanged)
+        // ... Connected & Recent Devices
         Column(modifier = Modifier.fillMaxWidth()) {
             if (activeDeviceIP != null) {
                 val activeDevice = recentDevices.find { it.ip == activeDeviceIP } ?: RecentDevice(activeDeviceIP, "Connected Device")
-                Text("CONNECTED DEVICE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = GreenAccent, letterSpacing = 1.sp, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
+
+                // Match Desktop Header Color
+                Text("CONNECTED DEVICE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
+
                 Surface(
-                    color = GreenAccent.copy(alpha = 0.1f), shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, GreenAccent.copy(alpha = 0.3f)),
+                    color = Accent.copy(alpha = 0.08f),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, Accent.copy(alpha = 0.3f)),
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
                 ) {
-                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        DeviceIcon(activeDeviceOS, GreenAccent, Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(activeDevice.name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                            Text(activeDevice.ip, color = GreenAccent, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
-                        }
-                        IconButton(onClick = onDisconnect, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Filled.Close, contentDescription = "Disconnect", tint = RedAccent)
+                    Box {
+                        // ── Active Left Glow Bar ──
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .padding(vertical = 12.dp)
+                                .width(3.dp)
+                                .height(40.dp)
+                                .background(Accent, RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp))
+                        )
+
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            DeviceIcon(activeDeviceOS, Accent, Modifier.size(20.dp))
+
+                            Spacer(modifier = Modifier.width(14.dp))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(activeDevice.name, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                                Text(activeDevice.ip.substringBefore(":"), color = TextMuted, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                            }
+                            IconButton(
+                                onClick = onDisconnect,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Close,
+                                    contentDescription = "Disconnect",
+                                    tint = RedAccent,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
                 }

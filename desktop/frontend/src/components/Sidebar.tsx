@@ -10,7 +10,6 @@ import {
   X,
 } from "lucide-react";
 import type { Device } from "../types";
-import { getOSLabel } from "../types";
 import IPInput from "./IPInput";
 
 interface Props {
@@ -150,11 +149,6 @@ export function Sidebar({
                       {device.ip.split(":")[0]}
                     </p>
                   </div>
-
-                  {/* OS badge */}
-                  <span className="text-[9px] font-bold tracking-wider font-mono text-[#3d4d63] bg-panel border border-[#1e2535] px-1.5 py-0.5 rounded shrink-0">
-                    {getOSLabel(device.os)}
-                  </span>
 
                   {/* Disconnect button */}
                   <button

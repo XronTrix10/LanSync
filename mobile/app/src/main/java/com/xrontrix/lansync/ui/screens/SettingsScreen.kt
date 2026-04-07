@@ -94,7 +94,7 @@ fun SettingsScreen(
                 ) {
                     Icon(Icons.Filled.Save, contentDescription = "Save", modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Save Name", fontWeight = FontWeight.Bold)
+                    Text("Save", fontWeight = FontWeight.Bold)
                 }
             }
         }
