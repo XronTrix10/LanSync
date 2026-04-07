@@ -33,7 +33,7 @@ export function TitleBar() {
   return (
     <div
       // ── Added pl-[80px] for Mac to avoid the native traffic lights! ──
-      className={`h-8 w-full bg-bg-base flex items-center shrink-0 select-none border-b border-[#1e2535] relative ${
+      className={`h-8 w-full bg-bg-base flex items-center shrink-0 select-none border-b border-border relative ${
         isMac ? "pl-20 justify-start" : "pl-4 justify-between"
       }`}
       data-wails-drag
@@ -49,8 +49,8 @@ export function TitleBar() {
           draggable="false"
         />
         <div className="text-md font-black tracking-[0.2em]">
-          <span className="text-[#3d4d63]">Lan</span>
-          <span className="text-[#00c9a7]">Sync</span>
+          <span className="text-dull">Lan</span>
+          <span className="text-gold">Sync</span>
         </div>
       </div>
 
@@ -63,21 +63,21 @@ export function TitleBar() {
         >
           <button
             onClick={WindowMinimise}
-            className="h-full aspect-square flex items-center justify-center text-[#8090a8] hover:bg-panel hover:text-[#dde4f0] transition-colors"
+            className="h-full aspect-square flex items-center justify-center text-light hover:bg-panel hover:text-text transition-colors"
           >
             <Minus size={14} />
           </button>
 
           <button
             onClick={WindowToggleMaximise}
-            className="h-full aspect-square flex items-center justify-center text-[#8090a8] hover:bg-panel hover:text-[#dde4f0] transition-colors"
+            className="h-full aspect-square flex items-center justify-center text-light hover:bg-panel hover:text-text transition-colors"
           >
             {isMaximised ? <Copy size={12} /> : <Square size={12} />}
           </button>
 
           <button
             onClick={Quit}
-            className="h-full aspect-square flex items-center justify-center text-[#8090a8] hover:bg-[#f04a6a] hover:text-white transition-colors"
+            className="h-full aspect-square flex items-center justify-center text-light hover:bg-red hover:text-white transition-colors"
           >
             <X size={14} />
           </button>

@@ -20,11 +20,11 @@ export function FileRow({
 
   return (
     <div
-      className="group grid grid-cols-[1fr_100px_80px] items-center px-5 py-2.5 min-h-11 border-b border-[#1e2535]/50 hover:bg-surface/80 transition-colors duration-100 cursor-default"
+      className="group grid grid-cols-[1fr_80px_60px] items-center px-5 py-2.5 min-h-11 border-b border-border/50 hover:bg-surface/80 transition-colors duration-100 cursor-default"
       onClick={() => file.isDir && !disabled && onNavigate(file.path)}
       style={{ cursor: file.isDir ? "pointer" : "default" }}
     >
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex items-center gap-3 min-w-0 pr-4">
         <FileIcon
           name={file.name}
           isDir={file.isDir}
@@ -35,14 +35,14 @@ export function FileRow({
         <span
           className={`text-[13px] truncate leading-none transition-colors ${
             file.isDir
-              ? "text-[#dde4f0] font-medium group-hover:text-accent"
-              : "text-[#8090a8] group-hover:text-[#dde4f0]"
+              ? "text-text font-medium group-hover:text-light"
+              : "text-light group-hover:text-text"
           }`}
         >
           {file.name}
         </span>
       </div>
-      <span className="text-[11px] font-mono text-[#3d4d63]">
+      <span className="text-[11px] font-mono text-dull">
         {file.isDir ? "—" : formatSize(file.size)}
       </span>
       <div className="flex justify-end">
@@ -52,7 +52,7 @@ export function FileRow({
             onDownload(file);
           }}
           disabled={disabled}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-[#3d4d63] border border-transparent opacity-0 group-hover:opacity-100 hover:text-accent hover:bg-accent/8 hover:border-accent/25 disabled:pointer-events-none transition-all duration-150"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-dull border border-transparent opacity-0 group-hover:opacity-100 hover:text-accent hover:bg-accent/8 hover:border-accent/25 disabled:pointer-events-none transition-all duration-150"
         >
           <Download size={11} />
           Get

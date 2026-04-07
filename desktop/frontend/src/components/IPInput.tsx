@@ -146,7 +146,7 @@ const IPInput = ({ value, onChange, onEnter }: Props) => {
     <div
       className="
         flex items-center justify-between w-full px-3 py-1.5
-        bg-bg-base border border-[#1e2535] rounded-lg
+        bg-bg-base border border-border rounded-lg
         focus-within:border-accent focus-within:ring-1 focus-within:ring-accent/20
         transition-all cursor-text
       "
@@ -175,11 +175,11 @@ const IPInput = ({ value, onChange, onEnter }: Props) => {
             maxLength={3}
             className="
               w-7 text-center bg-transparent outline-none
-              text-[12px] font-mono text-[#dde4f0] placeholder-[#3d4d63]
+              text-[12px] font-mono text-text placeholder-dull
             "
           />
           {i < 3 && (
-            <span className="text-[#3d4d63] mx-1 font-bold leading-none select-none">
+            <span className="text-dull mx-1 font-bold leading-none select-none">
               .
             </span>
           )}

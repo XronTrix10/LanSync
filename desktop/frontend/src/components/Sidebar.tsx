@@ -63,11 +63,11 @@ export function Sidebar({
   );
 
   return (
-    <aside className="w-64 shrink-0 flex flex-col bg-surface border-r border-[#1e2535]">
+    <aside className="w-64 shrink-0 flex flex-col bg-surface border-r border-border">
       {/* ── Logo & IPs ── */}
-      <div className="px-5 pt-5 pb-4 border-b border-[#1e2535]">
+      <div className="px-5 pt-5 pb-4 border-b border-border">
         <div
-          className="text-[14px] font-black tracking-widest mb-3 select-none truncate text-accent"
+          className="text-[14px] font-black tracking-widest mb-3 select-none truncate text-text"
           title={localDeviceName || "My Device"}
         >
           {localDeviceName || "My Device"}
@@ -82,17 +82,17 @@ export function Sidebar({
                 title={`IP: ${ip}`}
               >
                 <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00c9a7] opacity-50" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00c9a7]" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold opacity-50" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-gold" />
                 </span>
 
-                <span className="text-[11px] font-mono text-[#8090a8] truncate">
+                <span className="text-[11px] font-mono text-light truncate">
                   {ip}
                 </span>
               </div>
             ))}
           </div>
-          <button onClick={() => setShowSettings(true)} className="text-gray-400 hover:text-white">
+          <button onClick={() => setShowSettings(true)} title="Settings" className="text-light hover:text-text transition-colors duration-200">
             <Settings size={15} />
           </button>
         </div>
@@ -100,12 +100,12 @@ export function Sidebar({
 
       {/* ── Connected Devices ── */}
       <div className="flex-1 overflow-y-auto px-3 py-3 scrollbar-thin">
-        <p className="text-[9px] font-bold tracking-[0.15em] uppercase text-[#3d4d63] px-2 mb-2">
+        <p className="text-[9px] font-bold tracking-[0.15em] uppercase text-dull px-2 mb-2">
           Connected
         </p>
 
         {devices.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-6 text-[#3d4d63]">
+          <div className="flex flex-col items-center gap-2 py-6 text-dull">
             <Wifi size={22} strokeWidth={1.5} />
             <span className="text-[11px]">No devices connected</span>
           </div>
@@ -122,18 +122,18 @@ export function Sidebar({
                     border transition-all duration-150 relative overflow-hidden
                     ${isActive
                       ? "bg-accent/8 border-accent/30"
-                      : "bg-transparent border-transparent hover:bg-panel hover:border-[#1e2535]"
+                      : "bg-transparent border-transparent hover:bg-panel hover:border-border"
                     }
                   `}
                 >
                   {/* Active left glow bar */}
                   {isActive && (
-                    <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-accent shadow-[0_0_8px_#3d9eff]" />
+                    <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-accent shadow-[0_0_8px_#d76a04]" />
                   )}
 
                   {/* Device icon */}
                   <span
-                    className={`shrink-0 ${isActive ? "text-accent" : "text-[#3d4d63] group-hover:text-[#8090a8]"}`}
+                    className={`shrink-0 ${isActive ? "text-accent" : "text-dull group-hover:text-light"}`}
                   >
                     <DeviceIcon os={device.os} size={15} />
                   </span>
@@ -141,11 +141,11 @@ export function Sidebar({
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <p
-                      className={`text-[12px] font-semibold truncate leading-tight ${isActive ? "text-[#dde4f0]" : "text-[#8090a8] group-hover:text-[#dde4f0]"}`}
+                      className={`text-[12px] font-semibold truncate leading-tight ${isActive ? "text-text" : "text-light group-hover:text-text"}`}
                     >
                       {device.deviceName}
                     </p>
-                    <p className="text-[10px] font-mono text-[#3d4d63] truncate">
+                    <p className="text-[10px] font-mono text-light truncate">
                       {device.ip.split(":")[0]}
                     </p>
                   </div>
@@ -156,7 +156,7 @@ export function Sidebar({
                       e.stopPropagation();
                       onDisconnect(device.ip);
                     }}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded text-[#3d4d63] hover:text-[#f04a6a] hover:bg-[#f04a6a]/10 transition-all ml-0.5 shrink-0"
+                    className="opacity-0 group-hover:opacity-100 p-1 rounded text-dull hover:text-red hover:bg-red/10 transition-all ml-0.5 shrink-0"
                     title="Disconnect"
                   >
                     <X size={12} />
@@ -169,8 +169,8 @@ export function Sidebar({
       </div>
 
       {/* ── Add Device ── */}
-      <div className="px-3 pb-3 border-t border-[#1e2535] pt-3 flex flex-col gap-3">
-        <p className="text-[9px] font-bold tracking-[0.15em] uppercase text-[#3d4d63] px-2">
+      <div className="px-3 pb-3 border-t border-border pt-3 flex flex-col gap-3">
+        <p className="text-[9px] font-bold tracking-[0.15em] uppercase text-dull px-2">
           Add Device
         </p>
 
@@ -205,8 +205,8 @@ export function Sidebar({
         {unconnectedRecent.length > 0 && (
           <div className="flex flex-col gap-1 mt-1">
             <div className="flex items-center gap-1.5 px-2 mb-0.5">
-              <History size={9} className="text-[#3d4d63]" />
-              <span className="text-[9px] font-bold tracking-[0.12em] uppercase text-[#3d4d63]">
+              <History size={9} className="text-dull" />
+              <span className="text-[9px] font-bold tracking-[0.12em] uppercase text-dull">
                 Recent
               </span>
             </div>
@@ -219,18 +219,18 @@ export function Sidebar({
                 className="
                   group flex items-center gap-2.5 px-3 py-2 rounded-lg
                   transition-all text-left w-full border cursor-pointer 
-                  bg-transparent hover:bg-panel border-transparent hover:border-[#1e2535]
+                  bg-transparent hover:bg-panel border-transparent hover:border-border
                 "
               >
-                <span className="text-[#3d4d63] group-hover:text-[#8090a8]">
+                <span className="text-dull group-hover:text-light">
                   <DeviceIcon os={device.os} size={12} />
                 </span>
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-medium text-[#8090a8] truncate leading-none mb-0.5 group-hover:text-[#dde4f0]">
+                  <p className="text-[11px] font-medium text-light truncate mb-0.5 group-hover:text-text">
                     {device.deviceName}
                   </p>
-                  <p className="text-[10px] font-mono text-[#3d4d63] truncate">
+                  <p className="text-[10px] font-mono text-dull truncate">
                     {device.ip.split(":")[0]}
                   </p>
                 </div>
@@ -241,7 +241,7 @@ export function Sidebar({
                     onRemoveRecent(device.ip);
                   }}
                   title="Remove from history"
-                  className="opacity-0 group-hover:opacity-100 p-1 rounded text-[#3d4d63] hover:text-[#f04a6a] transition-all cursor-pointer"
+                  className="opacity-0 group-hover:opacity-100 p-1 rounded text-dull hover:text-red transition-all cursor-pointer"
                 >
                   <X size={10} />
                 </button>

@@ -490,7 +490,7 @@ export default function App() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-screen bg-bg-base text-[#dde4f0] select-none overflow-hidden">
+    <div className="flex flex-col h-screen bg-bg-base text-text select-none overflow-hidden">
       <ToastContainer toasts={toasts} />
       <TitleBar />
 

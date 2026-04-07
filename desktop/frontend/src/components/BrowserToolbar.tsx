@@ -54,11 +54,12 @@ export function BrowserToolbar({
   };
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-[#1e2535] bg-surface/60 shrink-0 h-12">
+    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-surface/60 shrink-0 h-12">
       <button
         onClick={() => onNavigate(parentPath || "/")}
         disabled={!canGoUp || disabled}
-        className="p-1.5 rounded-lg text-[#3d4d63] border border-transparent hover:text-[#dde4f0] hover:bg-panel hover:border-[#1e2535] disabled:opacity-25 disabled:cursor-not-allowed transition-all"
+        title="Goto parent folder"
+        className="p-1.5 rounded-lg text-dull border border-transparent hover:text-text hover:bg-panel hover:border-border disabled:opacity-25 disabled:cursor-not-allowed transition-all"
       >
         <ChevronUp size={16} />
       </button>
@@ -73,14 +74,14 @@ export function BrowserToolbar({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search locally..."
-            className="flex-1 bg-transparent border-none outline-none text-[13px] text-[#dde4f0] placeholder-[#3d4d63] min-w-0"
+            className="flex-1 bg-transparent border-none outline-none text-[13px] text-text placeholder-dull min-w-0"
           />
           <button
             onClick={() => {
               setSearchQuery("");
               setIsSearchActive(false);
             }}
-            className="p-1 text-[#8090a8] hover:text-[#dde4f0] rounded"
+            className="p-1 text-light hover:text-text rounded"
           >
             <X size={14} />
           </button>
@@ -89,15 +90,15 @@ export function BrowserToolbar({
         <div className="flex-1 flex items-center gap-1 overflow-x-auto hide-scrollbar min-w-0">
           <button
             onClick={() => onNavigate("/")}
-            className="text-[11px] font-mono text-[#3d4d63] hover:text-accent transition-colors shrink-0 px-1 py-0.5 rounded hover:bg-accent/8"
+            className="text-[11px] font-mono text-dull hover:text-accent transition-colors shrink-0 px-1 py-0.5 rounded hover:bg-accent/8"
           >
             /
           </button>
 
           {showEllipsis && (
             <span className="flex items-center gap-1 shrink-0">
-              <span className="text-[#1e2535] text-[11px]">/</span>
-              <span className="text-[11px] font-mono px-1 py-0.5 text-[#8090a8] select-none">
+              <span className="text-border text-[11px]">/</span>
+              <span className="text-[11px] font-mono px-1 py-0.5 text-light select-none">
                 ...
               </span>
             </span>
@@ -116,13 +117,13 @@ export function BrowserToolbar({
                 key={originalIndex}
                 className="flex items-center gap-1 shrink-0 min-w-0"
               >
-                <span className="text-[#1e2535] text-[11px]">/</span>
+                <span className="text-border text-[11px]">/</span>
                 <button
                   onClick={() => !isLast && onNavigate(absoluteSegPath)}
                   title={seg}
                   className={`
                     text-[11px] font-mono px-1 py-0.5 rounded transition-colors truncate max-w-30
-                    ${isLast ? "text-[#dde4f0] cursor-default" : "text-[#3d4d63] hover:text-accent hover:bg-accent/8 cursor-pointer"}
+                    ${isLast ? "text-text cursor-default" : "text-dull hover:text-accent hover:bg-accent/8 cursor-pointer"}
                   `}
                 >
                   {seg}
@@ -138,16 +139,18 @@ export function BrowserToolbar({
         <button
           onClick={() => onNavigate(currentPath)}
           disabled={disabled}
-          className="p-1.5 rounded-lg text-[#3d4d63] border border-transparent hover:text-[#dde4f0] hover:bg-panel hover:border-[#1e2535] disabled:opacity-30 transition-all"
+          title="Refresh"
+          className="p-1.5 rounded-lg text-dull border border-transparent hover:text-text hover:bg-panel hover:border-border disabled:opacity-30 transition-all"
         >
           <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
         </button>
-        <div className="w-px h-4 bg-[#1e2535]" />
+        <div className="w-px h-4 bg-border" />
 
         <button
           onClick={onShareClipboard}
           disabled={disabled}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-[#a78bfa] bg-[#a78bfa]/8 border border-[#a78bfa]/25 hover:bg-[#a78bfa]/15 hover:border-[#a78bfa]/40 disabled:opacity-40 transition-all"
+          title="Share Clipboard"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-purple bg-purple/8 border border-purple/25 hover:bg-purple/15 hover:border-purple/40 disabled:opacity-40 transition-all"
         >
           <ClipboardPaste size={12} /> Share
         </button>
@@ -157,7 +160,8 @@ export function BrowserToolbar({
           <button
             onClick={() => setIsSearchActive(true)}
             disabled={disabled}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-[#00c9a7] bg-[#00c9a7]/8 border border-[#00c9a7]/25 hover:bg-[#00c9a7]/15 hover:border-[#00c9a7]/40 disabled:opacity-40 transition-all"
+            title="Search for files"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-gold bg-gold/8 border border-gold/25 hover:bg-gold/15 hover:border-gold/40 disabled:opacity-40 transition-all"
           >
             <Search size={12} /> Search
           </button>

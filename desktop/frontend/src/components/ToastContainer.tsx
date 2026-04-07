@@ -19,26 +19,26 @@ export function ToastContainer({ toasts }: Props) {
             min-w-72 max-w-sm
             animate-in slide-in-from-bottom-4 fade-in duration-200
             ${toast.type === "success"
-              ? "bg-surface/95 border-[#00c9a7]/30"
-              : "bg-surface/95 border-[#f04a6a]/30"
+              ? "bg-surface/95 border-gold/30"
+              : "bg-surface/95 border-red/30"
             }
           `}
         >
           <div className="flex items-center gap-3">
             {toast.type === "success" ? (
-              <CheckCircle size={15} className="text-[#00c9a7] shrink-0" />
+              <CheckCircle size={15} className="text-gold shrink-0" />
             ) : (
-              <XCircle size={15} className="text-[#f04a6a] shrink-0" />
+              <XCircle size={15} className="text-red shrink-0" />
             )}
-            <span className="text-sm font-medium text-[#dde4f0] leading-snug">
+            <span className="text-sm font-medium text-text leading-snug">
               {toast.message}
             </span>
           </div>
 
           {toast.path && (
             <div className="flex items-center gap-2 ml-6 mt-0.5">
-              <FolderOpen size={11} className="text-[#8090a8] shrink-0" />
-              <span className="text-[11px] font-mono text-[#8090a8] truncate">
+              <FolderOpen size={11} className="text-light shrink-0" />
+              <span className="text-[11px] font-mono text-light truncate">
                 {toast.path}
               </span>
             </div>

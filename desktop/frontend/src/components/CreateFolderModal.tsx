@@ -53,11 +53,11 @@ export function CreateFolderModal({
 
   return (
     <div className="absolute inset-0 z-100 bg-bg-base/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-surface border border-[#1e2535] rounded-xl w-full max-w-sm shadow-2xl p-5 animate-in fade-in zoom-in-95 duration-150">
-        <h3 className="text-[14px] font-semibold text-[#dde4f0] mb-1">
+      <div className="bg-surface border border-border rounded-2xl w-full max-w-sm shadow-2xl p-5 animate-in fade-in zoom-in-95 duration-150">
+        <h3 className="text-[14px] font-semibold text-text mb-1">
           Create New Folder
         </h3>
-        <p className="text-[11px] text-[#8090a8] mb-4">
+        <p className="text-[11px] text-light mb-4">
           Enter a name for the new folder. Spaces are supported.
         </p>
 
@@ -74,23 +74,23 @@ export function CreateFolderModal({
             if (e.key === "Escape") handleClose();
           }}
           placeholder="Vacation Photos"
-          className="w-full px-3 py-2 bg-bg-base border border-[#1e2535] rounded-lg text-[13px] text-[#dde4f0] placeholder-[#3d4d63] outline-none focus:border-[#00c9a7] focus:ring-1 focus:ring-[#00c9a7]/20 transition-all mb-4"
+          className="w-full px-3 py-2 bg-bg-base border border-border rounded-lg text-[13px] text-text placeholder-dull outline-none focus:border-accent focus:ring-1 focus:ring-gold/20 transition-all mb-4"
         />
-        <div className="text-red-700 text-[12px] font-semibold -mt-2">
+        <div className="text-red-700 text-[11px] font-semibold -mt-3 ml-1">
           {folderError}
         </div>
 
-        <div className="flex justify-end gap-2">
+        <div className="mt-2 flex justify-end gap-2">
           <button
             onClick={handleClose}
-            className="px-4 py-1.5 text-[12px] font-medium text-[#8090a8] hover:text-[#dde4f0] transition-colors"
+            className="px-4 py-1.5 text-[12px] font-medium text-light hover:text-text transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={!newFolderName.trim() || loading}
-            className="px-4 py-1.5 bg-[#00c9a7]/10 border border-[#00c9a7]/30 text-[#00c9a7] rounded-lg text-[12px] font-medium hover:bg-[#00c9a7]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+            className="px-4 py-1.5 bg-accent/10 border border-accent/30 text-accent rounded-lg text-[12px] font-medium hover:bg-accent/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
           >
             {loading && <Loader2 size={12} className="animate-spin mr-1.5" />}
             Create

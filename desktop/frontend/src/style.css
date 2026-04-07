@@ -1,25 +1,35 @@
 @import "tailwindcss";
 
 @theme {
-  /* Core palette */
-  --color-bg-base:  #080a0f;
-  --color-surface:  #0e1117;
-  --color-panel:    #13171f;
-  --color-card:     #181d28;
-  --color-border:   #1e2535;
-  --color-border2:  #28334a;
-
-  /* Accent colours */
-  --color-accent:   #3d9eff;
-  --color-green:    #00c9a7;
-  --color-amber:    #f0a44a;
-  --color-red:      #f04a6a;
-  --color-purple:   #a78bfa;
-
+  /* Core palette — warm-shifted darks to complement orange */
+  --color-bg-base:  #090810;
+  --color-surface:  #100f17;
+  --color-panel:    #15131e;
+  --color-card:     #1b1826;
+  --color-border:   #221f2e;
+  --color-border2:  #2e2a3f;
+ 
+  /* Accent — orange family */
+  --color-accent:       #d76a04;   /* primary orange */
+  --color-accent-warm:  #e8832a;   /* hover / lighter orange */
+  --color-amber:        #f0a44a;   /* secondary warm, folder upload, code */
+ 
+  /* Semantic colours */
+  --color-gold:    #FFDF00;   /* success / online / transfer */
+  --color-red:      #f04a6a;   /* error / disconnect */
+  --color-purple:   #a78bfa;   /* image files */
+ 
   /* Text hierarchy */
-  --color-text:     #dde4f0;
-  --color-muted:    #8090a8;
-  --color-dim:      #3d4d63;
+  --color-text:     #ffe5da;   /* slightly warmer white */
+  --color-muted:    #8a8099;
+  --color-dim:      #42395a;
+  --color-dull:     #5f4538;
+  --color-light:    #e3a285;
+}
+
+.test {
+  color: #ffe5da;
+  background-color: #00bb2c;
 }
 
 html {

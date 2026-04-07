@@ -42,7 +42,7 @@ export function FileIcon({ name, isDir, ...props }: FileIconProps) {
 }
 
 export function fileIconColor(name: string, isDir: boolean): string {
-  if (isDir) return "#3d9eff";
+  if (isDir) return "#d76a04";
   const ext = getFileExtension(name);
   if (imageExts.has(ext))   return "#a78bfa";
   if (videoExts.has(ext))   return "#f87171";

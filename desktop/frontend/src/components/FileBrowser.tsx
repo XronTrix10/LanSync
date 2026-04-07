@@ -157,9 +157,9 @@ export function FileBrowser({
   // ── Empty / no-device state ────────────────────────────────────────────────
   if (!activeDeviceIP) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-bg-base text-[#3d4d63]">
+      <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-bg-base text-dull">
         <div className="relative">
-          <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-[#1e2535] flex items-center justify-center">
+          <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-border flex items-center justify-center">
             <Layers size={32} strokeWidth={1} />
           </div>
           <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-accent/15 border border-accent/30 flex items-center justify-center">
@@ -167,10 +167,10 @@ export function FileBrowser({
           </div>
         </div>
         <div className="text-center">
-          <p className="text-[15px] font-semibold text-[#8090a8]">
+          <p className="text-[15px] font-semibold text-light">
             No device selected
           </p>
-          <p className="text-[12px] text-[#3d4d63] mt-1">
+          <p className="text-[12px] text-dull mt-1">
             Connect a device from the sidebar to browse files
           </p>
         </div>
@@ -233,11 +233,11 @@ export function FileBrowser({
       />
 
       {/* ── Header Row ── */}
-      <div className="grid grid-cols-[1fr_100px_80px] px-5 py-2 border-b border-[#1e2535] bg-surface/40 shrink-0">
+      <div className="grid grid-cols-[1fr_80px_60px] px-5 py-2 border-b border-border bg-surface/40 shrink-0">
         {["Name", "Size", ""].map((col, i) => (
           <span
             key={i}
-            className="text-[9px] font-bold tracking-[0.12em] uppercase text-[#3d4d63]"
+            className="text-[9px] font-bold tracking-[0.12em] uppercase text-dull"
           >
             {col}
           </span>
@@ -247,7 +247,7 @@ export function FileBrowser({
       {/* ── File List Area ── */}
       <div className="flex-1 overflow-y-auto scrollbar-thin relative pb-20">
         {loading && files.length === 0 && (
-          <div className="flex items-center justify-center gap-2 py-16 text-[#3d4d63]">
+          <div className="flex items-center justify-center gap-2 py-16 text-dull">
             <Loader2 size={16} className="animate-spin" />
             <span className="text-[12px]">Loading…</span>
           </div>
@@ -255,12 +255,12 @@ export function FileBrowser({
 
         {/* ── Empty State ── */}
         {!loading && files.length === 0 && !isSearchActive && (
-          <div className="flex flex-col items-center justify-center h-full gap-4 text-[#3d4d63]">
+          <div className="flex flex-col items-center justify-center h-full gap-4 text-dull">
             <span className="text-4xl mb-1">📭</span>
-            <p className="text-[13px] text-[#8090a8] font-medium">
+            <p className="text-[13px] text-light font-medium">
               This folder is empty
             </p>
-            <p className="text-[11px] text-[#3d4d63]">
+            <p className="text-[11px] text-dull">
               Use the + button below to add files
             </p>
           </div>
@@ -271,9 +271,9 @@ export function FileBrowser({
           files.length > 0 &&
           displayFiles.length === 0 &&
           isSearchActive && (
-            <div className="flex flex-col items-center justify-center h-full gap-4 text-[#3d4d63]">
-              <Search size={32} className="text-[#3d4d63] mb-1 opacity-50" />
-              <p className="text-[13px] text-[#8090a8] font-medium">
+            <div className="flex flex-col items-center justify-center h-full gap-4 text-dull">
+              <Search size={32} className="text-dull mb-1 opacity-50" />
+              <p className="text-[13px] text-light font-medium">
                 No matching files found
               </p>
             </div>
@@ -296,33 +296,31 @@ export function FileBrowser({
         onClick={(e) => e.stopPropagation()}
       >
         {showFabMenu && (
-          <div className="bg-panel border border-[#1e2535] rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.5)] py-1.5 px-1.5 w-44 animate-in slide-in-from-bottom-2 fade-in duration-150">
+          <div className="rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.5)] py-1.5 px-1.5 w-40 flex flex-col gap-y-2 animate-in slide-in-from-bottom-2 fade-in duration-150">
             <button
               onClick={() => {
                 setShowFabMenu(false);
                 onUploadFiles();
               }}
-              className="w-full rounded-lg flex items-center gap-2.5 px-3 py-2.5 text-[12px] font-medium text-[#dde4f0] hover:bg-accent/10 hover:text-accent transition-colors"
+              className="w-full rounded-xl border border-purple/30 flex items-center gap-2.5 px-3 py-2.5 text-[12px] font-medium bg-purple/10 text-purple transition-colors backdrop-blur-md hover:text-text"
             >
               <Upload size={14} /> Upload Files
             </button>
-            <div className="h-px w-full bg-[#1e2535] my-1" />
             <button
               onClick={() => {
                 setShowFabMenu(false);
                 onUploadFolder();
               }}
-              className="w-full rounded-lg flex items-center gap-2.5 px-3 py-2.5 text-[12px] font-medium text-[#dde4f0] hover:bg-[#00c9a7]/10 hover:text-[#00c9a7] transition-colors"
+              className="w-full rounded-xl border border-gold/30 flex items-center gap-2.5 px-3 py-2.5 text-[12px] font-medium bg-gold/10 text-gold transition-colors backdrop-blur-md hover:text-text"
             >
               <FolderUp size={14} /> Upload Folder
             </button>
-            <div className="h-px w-full bg-[#1e2535] my-1" />
             <button
               onClick={() => {
                 setShowFabMenu(false);
                 setShowCreateModal(true);
               }}
-              className="w-full rounded-lg flex items-center gap-2.5 px-3 py-2.5 text-[12px] font-medium text-[#dde4f0] hover:bg-accent/10 hover:text-accent transition-colors"
+              className="w-full rounded-xl flex items-center border border-accent/30 gap-2.5 px-3 py-2.5 text-[12px] font-medium bg-accent/10 text-accent transition-colors backdrop-blur-md hover:text-text"
             >
               <FolderPlus size={14} /> Create Folder
             </button>
@@ -333,8 +331,8 @@ export function FileBrowser({
           onClick={() => setShowFabMenu(!showFabMenu)}
           disabled={disabled}
           className={`
-            w-12 h-12 rounded-xl flex items-center justify-center shadow-lg transition-all duration-200
-            ${showFabMenu ? "bg-panel text-accent border border-accent/30" : "bg-accent text-bg-base hover:bg-accent/90 hover:scale-105 border border-transparent"}
+            w-12 h-12 flex items-center justify-center shadow-lg transition-all duration-200
+            ${showFabMenu ? "bg-panel text-accent border border-accent/30 rounded-full" : "bg-accent rounded-xl text-bg-base hover:bg-accent/90 hover:scale-105 border border-transparent shadow-xl shadow-accent/20"}
             disabled:opacity-50 disabled:scale-100
           `}
         >
