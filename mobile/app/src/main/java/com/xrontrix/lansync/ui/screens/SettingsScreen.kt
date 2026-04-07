@@ -8,11 +8,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.SnippetFolder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xrontrix.lansync.ui.theme.*
@@ -39,6 +41,7 @@ fun SettingsScreen(
 
     // Helper to make ugly Android URIs look beautiful and human-readable
     fun formatUriDisplay(uri: String): String {
+        if (uri == "ROOT") return "Entire Device Storage"
         if (uri.isBlank()) return "Default (Downloads/LanSync)"
         return try {
             val decoded = java.net.URLDecoder.decode(uri, "UTF-8")
@@ -56,7 +59,7 @@ fun SettingsScreen(
         Text("Settings", color = TextPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ── DEVICE NAME SECTION (Boxed into its own distinct module) ──
+        // ── DEVICE NAME SECTION ──
         Surface(
             color = Panel, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, Surface),
             modifier = Modifier.fillMaxWidth()
@@ -92,6 +95,7 @@ fun SettingsScreen(
         Text("DIRECTORIES", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         Spacer(modifier = Modifier.height(12.dp))
 
+        // ── DOWNLOAD FOLDER (Full Width) ──
         Surface(
             color = Panel, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Surface),
             modifier = Modifier.fillMaxWidth(), onClick = { downloadPicker.launch(null) }
@@ -101,23 +105,50 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text("Download Folder", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    Text(formatUriDisplay(currentDownloadFolderUri), color = TextMuted, fontSize = 12.sp, maxLines = 1)
+                    Text(formatUriDisplay(currentDownloadFolderUri), color = TextMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Surface(
-            color = Panel, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Surface),
-            modifier = Modifier.fillMaxWidth(), onClick = { exposedPicker.launch(null) }
+        // ── EXPOSED FOLDER & SHARE ROOT (Side-by-Side Grid) ──
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Folder, contentDescription = null, tint = GreenAccent)
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
+            // 1. Standard Exposed Folder Picker
+            Surface(
+                color = Panel, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Surface),
+                modifier = Modifier.weight(1f), onClick = { exposedPicker.launch(null) }
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Icon(Icons.Filled.Folder, contentDescription = null, tint = GreenAccent)
+                    Spacer(modifier = Modifier.height(12.dp))
                     Text("Exposed Folder", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    Text(formatUriDisplay(currentExposedFolderUri), color = TextMuted, fontSize = 12.sp, maxLines = 1)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = if (currentExposedFolderUri != "ROOT") formatUriDisplay(currentExposedFolderUri) else "Not active",
+                        color = TextMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            // 2. Share Root Bypass Button
+            Surface(
+                color = Panel, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Surface),
+                modifier = Modifier.weight(1f), onClick = { onUpdateExposedFolder("ROOT") }
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Icon(Icons.Filled.SnippetFolder, contentDescription = null, tint = RedAccent)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Share Root", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = if (currentExposedFolderUri == "ROOT") "Currently Active" else "Entire Device",
+                        color = if (currentExposedFolderUri == "ROOT") RedAccent else TextMuted,
+                        fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }
