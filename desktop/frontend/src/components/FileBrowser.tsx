@@ -4,9 +4,11 @@ import {
   FolderUp,
   Layers,
   Loader2,
+  Plus,
+  Search,
   Upload,
 } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FileInfo } from "../types";
 import { BrowserToolbar } from "./BrowserToolbar";
 import { CreateFolderModal } from "./CreateFolderModal";
@@ -49,9 +51,35 @@ export function FileBrowser({
 }: Props) {
   const [isDragging, setIsDragging] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const dragCounter = useRef(0);
+  const [showFabMenu, setShowFabMenu] = useState(false);
 
+  // ── NEW: Search States ──
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchActive, setIsSearchActive] = useState(false);
+
+  const dragCounter = useRef(0);
   const disabled = loading || uploading;
+
+  // 1. Reset search ONLY when the directory changes
+  useEffect(() => {
+    setSearchQuery("");
+    setIsSearchActive(false);
+  }, [currentPath]);
+
+  // 2. Local Filter Engine (Instantly recalculates on type or refresh)
+  const displayFiles = useMemo(() => {
+    if (!searchQuery.trim()) return files;
+    return files.filter((f) =>
+      f.name.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+  }, [files, searchQuery]);
+
+  // Close FAB menu on outside click
+  useEffect(() => {
+    const handleClickOutside = () => setShowFabMenu(false);
+    if (showFabMenu) document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [showFabMenu]);
 
   // ── Drag and drop handlers ──────────────────────────────────────────────────
   const handleDragEnter = useCallback(
@@ -86,7 +114,6 @@ export function FileBrowser({
       let hasFolder = false;
       let hasLargeFile = false;
 
-      // 1. Detect Folders securely (Works on Windows / Mac Chromium)
       if (e.dataTransfer.items) {
         for (let i = 0; i < e.dataTransfer.items.length; i++) {
           const item = e.dataTransfer.items[i];
@@ -102,7 +129,6 @@ export function FileBrowser({
         }
       }
 
-      // 2. Extract valid files directly from the reliable HTML5 FileList
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         for (let i = 0; i < e.dataTransfer.files.length; i++) {
           const file = e.dataTransfer.files[i];
@@ -118,12 +144,9 @@ export function FileBrowser({
         onError("Please use the 'Folder' button to upload folders");
         return;
       }
-
       if (hasLargeFile) {
         onError("One or more files are too large (4GB limit).");
       }
-
-      // On Linux, validFiles is empty here, so this safely skips doing anything!
       if (validFiles.length > 0) {
         onDropUpload(validFiles);
       }
@@ -184,7 +207,6 @@ export function FileBrowser({
         </div>
       )}
 
-      {/* ── Modals & Toolbar ── */}
       <CreateFolderModal
         isOpen={showCreateModal}
         loading={loading}
@@ -201,13 +223,13 @@ export function FileBrowser({
         parentPath={parentPath}
         deviceRootPath={deviceRootPath}
         loading={loading}
-        uploading={uploading}
         disabled={disabled}
         onNavigate={onNavigate}
-        onUploadFiles={onUploadFiles}
-        onUploadFolder={onUploadFolder}
-        onCreateFolderClick={() => setShowCreateModal(true)}
         onShareClipboard={onShareClipboard}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        isSearchActive={isSearchActive}
+        setIsSearchActive={setIsSearchActive}
       />
 
       {/* ── Header Row ── */}
@@ -223,7 +245,7 @@ export function FileBrowser({
       </div>
 
       {/* ── File List Area ── */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin relative">
+      <div className="flex-1 overflow-y-auto scrollbar-thin relative pb-20">
         {loading && files.length === 0 && (
           <div className="flex items-center justify-center gap-2 py-16 text-[#3d4d63]">
             <Loader2 size={16} className="animate-spin" />
@@ -232,48 +254,32 @@ export function FileBrowser({
         )}
 
         {/* ── Empty State ── */}
-        {!loading && files.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full gap-4 pb-16 text-[#3d4d63]">
-            <div className="flex flex-col items-center gap-2">
-              <span className="text-4xl mb-1">📭</span>
-              <p className="text-[13px] text-[#8090a8] font-medium">
-                This folder is empty
-              </p>
-            </div>
-            <div className="flex items-center gap-3 mt-2">
-              <button
-                onClick={onUploadFiles}
-                disabled={disabled}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-semibold text-accent bg-accent/8 border border-accent/25 hover:bg-accent/15 hover:border-accent/40 disabled:opacity-40 transition-all"
-              >
-                {uploading ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <Upload size={14} />
-                )}{" "}
-                Upload Files
-              </button>
-
-              <button
-                onClick={onUploadFolder}
-                disabled={disabled}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-semibold text-[#00c9a7] bg-[#00c9a7]/8 border border-[#00c9a7]/25 hover:bg-[#00c9a7]/15 hover:border-[#00c9a7]/40 disabled:opacity-40 transition-all"
-              >
-                <FolderUp size={14} /> Upload Folder
-              </button>
-
-              <button
-                onClick={() => setShowCreateModal(true)}
-                disabled={disabled}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-semibold text-accent bg-accent/8 border border-accent/25 hover:bg-accent/15 hover:border-accent/40 disabled:opacity-40 transition-all"
-              >
-                <FolderPlus size={14} /> Create Folder
-              </button>
-            </div>
+        {!loading && files.length === 0 && !isSearchActive && (
+          <div className="flex flex-col items-center justify-center h-full gap-4 text-[#3d4d63]">
+            <span className="text-4xl mb-1">📭</span>
+            <p className="text-[13px] text-[#8090a8] font-medium">
+              This folder is empty
+            </p>
+            <p className="text-[11px] text-[#3d4d63]">
+              Use the + button below to add files
+            </p>
           </div>
         )}
 
-        {files.map((file, idx) => (
+        {/* ── No Search Results State ── */}
+        {!loading &&
+          files.length > 0 &&
+          displayFiles.length === 0 &&
+          isSearchActive && (
+            <div className="flex flex-col items-center justify-center h-full gap-4 text-[#3d4d63]">
+              <Search size={32} className="text-[#3d4d63] mb-1 opacity-50" />
+              <p className="text-[13px] text-[#8090a8] font-medium">
+                No matching files found
+              </p>
+            </div>
+          )}
+
+        {displayFiles.map((file, idx) => (
           <FileRow
             key={`${file.path}-${idx}`}
             file={file}
@@ -282,6 +288,62 @@ export function FileBrowser({
             disabled={disabled}
           />
         ))}
+      </div>
+
+      {/* ── Unified Floating Action Button ── */}
+      <div
+        className="absolute bottom-6 right-6 z-40 flex flex-col items-end gap-3"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {showFabMenu && (
+          <div className="bg-panel border border-[#1e2535] rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.5)] py-1.5 px-1.5 w-44 animate-in slide-in-from-bottom-2 fade-in duration-150">
+            <button
+              onClick={() => {
+                setShowFabMenu(false);
+                onUploadFiles();
+              }}
+              className="w-full rounded-lg flex items-center gap-2.5 px-3 py-2.5 text-[12px] font-medium text-[#dde4f0] hover:bg-accent/10 hover:text-accent transition-colors"
+            >
+              <Upload size={14} /> Upload Files
+            </button>
+            <div className="h-px w-full bg-[#1e2535] my-1" />
+            <button
+              onClick={() => {
+                setShowFabMenu(false);
+                onUploadFolder();
+              }}
+              className="w-full rounded-lg flex items-center gap-2.5 px-3 py-2.5 text-[12px] font-medium text-[#dde4f0] hover:bg-[#00c9a7]/10 hover:text-[#00c9a7] transition-colors"
+            >
+              <FolderUp size={14} /> Upload Folder
+            </button>
+            <div className="h-px w-full bg-[#1e2535] my-1" />
+            <button
+              onClick={() => {
+                setShowFabMenu(false);
+                setShowCreateModal(true);
+              }}
+              className="w-full rounded-lg flex items-center gap-2.5 px-3 py-2.5 text-[12px] font-medium text-[#dde4f0] hover:bg-accent/10 hover:text-accent transition-colors"
+            >
+              <FolderPlus size={14} /> Create Folder
+            </button>
+          </div>
+        )}
+
+        <button
+          onClick={() => setShowFabMenu(!showFabMenu)}
+          disabled={disabled}
+          className={`
+            w-12 h-12 rounded-xl flex items-center justify-center shadow-lg transition-all duration-200
+            ${showFabMenu ? "bg-panel text-accent border border-accent/30" : "bg-accent text-bg-base hover:bg-accent/90 hover:scale-105 border border-transparent"}
+            disabled:opacity-50 disabled:scale-100
+          `}
+        >
+          {uploading ? (
+            <Loader2 size={24} className="animate-spin" />
+          ) : (
+            <Plus size={24} className={showFabMenu ? "rotate-45": "" + " transition-all duration-200"} />
+          )}
+        </button>
       </div>
     </div>
   );
