@@ -34,7 +34,7 @@ export function TitleBar() {
     <div
       // ── Added pl-[80px] for Mac to avoid the native traffic lights! ──
       className={`h-8 w-full bg-bg-base flex items-center shrink-0 select-none border-b border-[#1e2535] relative ${
-        isMac ? "pl-20 justify-start" : "px-4 justify-between"
+        isMac ? "pl-20 justify-start" : "pl-4 justify-between"
       }`}
       data-wails-drag
       style={{ "--wails-draggable": "drag" } as any}
