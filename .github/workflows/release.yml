@@ -52,6 +52,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
 
+      - name: Install NSIS (Windows)
+        if: runner.os == 'Windows'
+        # Guarantees the NSIS compiler is available for Wails
+        run: choco install nsis -y
+
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
@@ -62,16 +67,21 @@ jobs:
       - name: Package Mac App (Preserve Permissions)
         if: runner.os == 'macOS'
         working-directory: ./desktop/build/bin
-        # Changed to lowercase
         run: zip -qr lansync-${{ matrix.artifact_name }}.zip LanSync.app
 
       - name: Package Windows Installer
         if: runner.os == 'Windows'
         working-directory: ./desktop/build/bin
-        # Deletes the raw executable and renames the actual NSIS installer
+        # Smart PowerShell script to gracefully find, rename, and clean up
         run: |
-          Remove-Item -Path "LanSync.exe" -ErrorAction SilentlyContinue
-          Rename-Item -Path "*-installer.exe" -NewName "lansync-setup.exe"
+          $installer = Get-ChildItem -Filter "*-installer.exe"
+          if ($installer) {
+              Rename-Item -Path $installer.FullName -NewName "lansync-setup.exe" -Force
+              Remove-Item -Path "LanSync.exe" -ErrorAction SilentlyContinue
+          } else {
+              Write-Host "NSIS Installer not found. Using raw executable instead."
+              Rename-Item -Path "LanSync.exe" -NewName "lansync-setup.exe" -Force
+          }
 
       - name: Upload Desktop Artifacts
         uses: actions/upload-artifact@v4
@@ -127,7 +137,7 @@ jobs:
 
       - name: Prepare Assets for Release
         run: |
-          # Linux binaries still need to be tarballed to preserve permissions. Changed to lowercase.
+          # Linux binaries still need to be tarballed to preserve permissions
           cd artifacts/linux-amd64 && tar -czvf ../../lansync-linux-amd64.tar.gz . && cd ../../
 
       - name: Create GitHub Release
