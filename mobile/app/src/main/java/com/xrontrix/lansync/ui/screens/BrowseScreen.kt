@@ -259,15 +259,37 @@ fun BrowseScreen(
                         }
                     )
                 } else {
-                    Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 16.dp), 
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         DeviceIcon(activeDeviceOS, GreenAccent, Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(activeDeviceName, color = TextPrimary, fontWeight = FontWeight.Black, fontSize = 18.sp, modifier = Modifier.weight(1f))
-                    }
-                    
-                    // ── Search Trigger Button ──
-                    IconButton(onClick = { isSearchActive = true }) {
-                        Icon(Icons.Rounded.Search, contentDescription = "Search", tint = TextPrimary)
+                        Text(
+                            text = activeDeviceName, 
+                            color = TextPrimary, 
+                            fontWeight = FontWeight.Black, 
+                            fontSize = 18.sp, 
+                            modifier = Modifier.weight(1f) // Pushes the button to the far right
+                        )
+                        
+                        // ── Search Trigger Button ──
+                        IconButton(
+                            onClick = { isSearchActive = true },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(GreenAccent.copy(alpha = 0.1f), RoundedCornerShape(10.dp))
+                                .border(1.dp, GreenAccent.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Search, 
+                                contentDescription = "Search", 
+                                tint = GreenAccent, // Matches the border/bg color theme
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
             }
