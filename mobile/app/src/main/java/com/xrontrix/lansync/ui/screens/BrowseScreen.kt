@@ -277,19 +277,21 @@ fun BrowseScreen(
                         )
                         
                         // ── Search Trigger Button ──
-                        IconButton(
-                            onClick = { isSearchActive = true },
-                            modifier = Modifier
-                                .size(36.dp)
-                                .background(GreenAccent.copy(alpha = 0.1f), RoundedCornerShape(10.dp))
-                                .border(1.dp, GreenAccent.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                        Surface(
+                            color = GreenAccent.copy(alpha = 0.1f),
+                            contentColor = GreenAccent,
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, GreenAccent.copy(alpha = 0.3f)),
+                            modifier = Modifier.size(36.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Search, 
-                                contentDescription = "Search", 
-                                tint = GreenAccent, // Matches the border/bg color theme
-                                modifier = Modifier.size(20.dp)
-                            )
+                            IconButton(onClick = { isSearchActive = true }) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Search, 
+                                    contentDescription = "Search", 
+                                    tint = GreenAccent, 
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -409,17 +411,19 @@ fun BrowseScreen(
         Column(modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp), horizontalAlignment = Alignment.End) {
             SmallFloatingActionButton(
                 onClick = onShareClipboardClick,
-                containerColor = Color(0xFFa78bfa).copy(alpha = 0.15f), // High transparency
-                contentColor = Color(0xFFa78bfa),
-                elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp), // Remove shadow for true glass look
+                containerColor = Surface,
+                contentColor = Color(0xFFa78bfa), // Keep the purple accent for the icon
+                elevation = FloatingActionButtonDefaults.elevation(
+                    defaultElevation = 6.dp, // Add shadow to lift it off the text
+                    pressedElevation = 2.dp
+                ),
                 modifier = Modifier
                     .padding(bottom = 12.dp)
-                    // Optional: If running strictly on Android 12+, you can add actual blur here
-                    // .graphicsLayer { renderEffect = android.graphics.RenderEffect.createBlurEffect(20f, 20f, android.graphics.Shader.TileMode.CLAMP).asComposeRenderEffect() }
-                ,
+                    // Add a subtle border to keep the premium aesthetic
+                    .border(1.dp, Color(0xFFa78bfa).copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Icon(Icons.Filled.ContentPaste, contentDescription = "Share Clipboard")
+                Icon(Icons.Filled.ContentPasteGo, contentDescription = "Share Clipboard")
             }
 
             // ── Dynamic FAB Swap Logic ──
