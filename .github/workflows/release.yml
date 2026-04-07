@@ -63,6 +63,7 @@ jobs:
 
       - name: Sync Desktop & Frontend Versions
         working-directory: ./desktop
+        shell: bash    # ── Forces Windows to run this script using Bash!
         run: |
           # 1. Clean the version string (removes 'v' if present)
           VERSION="${{ github.event.inputs.version }}"
