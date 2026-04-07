@@ -1,4 +1,3 @@
-import { ShieldAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   AcceptConnection,
@@ -6,9 +5,11 @@ import {
   DownloadFile,
   DownloadFolder,
   GetDeviceName,
+  GetHomeDir,
   GetLocalIPs,
   GetRemoteFiles,
   GetSessionToken,
+  GetSharedDir,
   IdentifyDevice,
   MakeDirectory,
   PushFolderToAndroid,
@@ -16,13 +17,16 @@ import {
   RejectConnection,
   RequestConnection,
   SaveDeviceName,
+  SaveSharedDir,
   SelectDirectory,
   SelectFiles,
   ShareClipboardText,
 } from "../wailsjs/go/main/App";
 import { EventsOff, EventsOn } from "../wailsjs/runtime/runtime";
 
+import { ConnectionRequestModal } from "./components/ConnectionRequestModal";
 import { FileBrowser } from "./components/FileBrowser";
+import { SettingsModal } from "./components/SettingsModal";
 import { Sidebar } from "./components/Sidebar";
 import { TitleBar } from "./components/TitleBar";
 import { ToastContainer } from "./components/ToastContainer";
@@ -43,6 +47,8 @@ export default function App() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [activeDeviceIP, setActiveDeviceIP] = useState<string | null>(null);
   const [newDeviceIP, setNewDeviceIP] = useState<string>("");
+  const [sharedDir, setSharedDir] = useState("");
+  const [homeDir, setHomeDir] = useState("");
   const [pendingRequest, setPendingRequest] =
     useState<ConnectionRequest | null>(null);
   const [recentDevices, setRecentDevices] = useState<Device[]>([]);
@@ -62,6 +68,7 @@ export default function App() {
   const handleSaveSettings = async () => {
     try {
       await SaveDeviceName(deviceName);
+      await SaveSharedDir(sharedDir);
       setShowSettings(false);
       showToast("Settings saved", "success");
     } catch (err) {
@@ -78,7 +85,6 @@ export default function App() {
     dropStateRef.current = { activeDeviceIP, currentPath, devices };
   }, [activeDeviceIP, currentPath, devices]);
 
-  // FIX: Moved getBaseDirName above useEffect and 
   // upgraded the regex to aggressively squash ALL backslashes.
   const getBaseDirName = (path: string) => {
     if (!path) return "/";
@@ -94,11 +100,13 @@ export default function App() {
     if (savedDevices) {
       try {
         setRecentDevices(JSON.parse(savedDevices));
-      } catch (e) { }
+      } catch (e) {}
     }
 
     GetLocalIPs().then(setLocalIPs);
     GetDeviceName().then((name) => setDeviceName(name));
+    GetHomeDir().then(setHomeDir);
+    GetSharedDir().then(setSharedDir);
 
     EventsOn("transfer_progress", (progress: TransferProgress) => {
       setActiveTransfers((prev) => ({ ...prev, [progress.id]: progress }));
@@ -246,9 +254,15 @@ export default function App() {
     setLoading(true);
     try {
       const device: any = await IdentifyDevice(ipToConnect);
-      showToast(`Asking ${device.deviceName || ipToConnect} to connect...`, "success");
+      showToast(
+        `Asking ${device.deviceName || ipToConnect} to connect...`,
+        "success",
+      );
 
-      const connectedDeviceName = await RequestConnection(device.ip, device.port);
+      const connectedDeviceName = await RequestConnection(
+        device.ip,
+        device.port,
+      );
 
       if (connectedDeviceName) {
         // Overwrite the generic discovery name with the real, custom name from the handshake!
@@ -261,7 +275,10 @@ export default function App() {
         setActiveDeviceIP(device.ip);
         setNewDeviceIP("");
         addRecentDevice(device);
-        showToast(`Connection established with ${connectedDeviceName}!`, "success");
+        showToast(
+          `Connection established with ${connectedDeviceName}!`,
+          "success",
+        );
       } else {
         showToast(`Connection was declined`, "error");
       }
@@ -462,7 +479,10 @@ export default function App() {
       await ShareClipboardText(activeDeviceIP, getActivePort());
       showToast(`Desktop clipboard sent to device`, "success");
     } catch (err: any) {
-      showToast(`Clipboard share failed: ${err.message || String(err)}`, "error");
+      showToast(
+        `Clipboard share failed: ${err.message || String(err)}`,
+        "error",
+      );
     } finally {
       setLoading(false);
     }
@@ -474,38 +494,11 @@ export default function App() {
       <ToastContainer toasts={toasts} />
       <TitleBar />
 
-      {pendingRequest && (
-        <div className="absolute inset-0 z-50 bg-bg-base/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-surface border border-accent/30 rounded-2xl w-full max-w-sm shadow-[0_0_40px_rgba(61,158,255,0.1)] p-6 flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mb-4 border border-accent/20">
-              <ShieldAlert size={28} className="text-accent" />
-            </div>
-            <h3 className="text-lg font-semibold text-[#dde4f0] mb-1">
-              Connection Request
-            </h3>
-            <p className="text-sm text-[#8090a8] mb-6">
-              <strong className="text-[#dde4f0]">
-                {pendingRequest.deviceName}
-              </strong>{" "}
-              ({pendingRequest.ip}) wants to connect.
-            </p>
-            <div className="flex gap-3 w-full">
-              <button
-                onClick={handleRejectConnection}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-[#f04a6a] bg-[#f04a6a]/10 hover:bg-[#f04a6a]/20 transition-all"
-              >
-                Reject
-              </button>
-              <button
-                onClick={handleAcceptConnection}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-[#00c9a7] bg-[#00c9a7]/10 hover:bg-[#00c9a7]/20 transition-all"
-              >
-                Accept
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConnectionRequestModal
+        request={pendingRequest}
+        onAccept={handleAcceptConnection}
+        onReject={handleRejectConnection}
+      />
 
       <div className="flex flex-1 overflow-hidden min-h-0">
         <Sidebar
@@ -546,44 +539,16 @@ export default function App() {
         </div>
       </div>
 
-      {/* --- SETTINGS MODAL --- */}
-      {showSettings && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-panel border border-gray-800 rounded-xl p-6 w-full max-w-md shadow-2xl">
-            <h2 className="text-xl font-bold text-white mb-2">Settings</h2>
-            <p className="text-sm text-gray-400 mb-6">Customize how this PC appears on your network.</p>
-
-            <div className="mb-6">
-              <label className="block text-xs font-bold text-gray-500 tracking-wider mb-2">
-                DISPLAY NAME
-              </label>
-              <input
-                type="text"
-                value={deviceName}
-                onChange={(e) => setDeviceName(e.target.value)}
-                className="w-full bg-[#0a0c10] border border-gray-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors"
-                placeholder="e.g. Sreejan's MacBook"
-              />
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowSettings(false)}
-                className="px-4 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveSettings}
-                disabled={!deviceName.trim()}
-                className="px-6 py-2 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-500 disabled:opacity-50 transition-colors"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SettingsModal
+        isOpen={showSettings}
+        deviceName={deviceName}
+        sharedDir={sharedDir}
+        homeDir={homeDir}
+        setDeviceName={setDeviceName}
+        setSharedDir={setSharedDir}
+        onClose={() => setShowSettings(false)}
+        onSave={handleSaveSettings}
+      />
     </div>
   );
 }

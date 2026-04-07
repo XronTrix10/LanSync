@@ -99,7 +99,34 @@ func (a *App) GetSessionToken(ip string) string {
 	return a.sessionManager.GetOutboundToken(ip)
 }
 
-// ── NEW: Clipboard Binding ──
+// GetHomeDir returns the OS home directory so the frontend can format paths as ~/
+func (a *App) GetHomeDir() string {
+	home, _ := os.UserHomeDir()
+	return home
+}
+
+// GetSharedDir loads the saved shared directory from config, defaulting to Home
+func (a *App) GetSharedDir() string {
+	cfg := config.Load()
+	if cfg.SharedDir == "" { // Assuming you add SharedDir to your config struct
+		home, _ := os.UserHomeDir()
+		return home
+	}
+	return cfg.SharedDir
+}
+
+// SaveSharedDir saves the new path and live-updates the running server
+func (a *App) SaveSharedDir(path string) error {
+	cfg := config.Load()
+	cfg.SharedDir = path
+	err := config.Save(cfg)
+	if err == nil {
+		// Live-update the running server so the user doesn't have to restart
+		a.desktopServer.SharedDir = path
+	}
+	return err
+}
+
 func (a *App) ShareClipboardText(ip string, port string) error {
 	if a.sessionManager.GetOutboundToken(ip) == "" {
 		return fmt.Errorf("device not securely connected")

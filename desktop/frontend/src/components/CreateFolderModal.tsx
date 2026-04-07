@@ -73,7 +73,7 @@ export function CreateFolderModal({
             if (e.key === "Enter") handleSubmit();
             if (e.key === "Escape") handleClose();
           }}
-          placeholder="e.g. Vacation Photos"
+          placeholder="Vacation Photos"
           className="w-full px-3 py-2 bg-bg-base border border-[#1e2535] rounded-lg text-[13px] text-[#dde4f0] placeholder-[#3d4d63] outline-none focus:border-[#00c9a7] focus:ring-1 focus:ring-[#00c9a7]/20 transition-all mb-4"
         />
         <div className="text-red-700 text-[12px] font-semibold -mt-2">

@@ -22,6 +22,10 @@ export function GetDeviceName() {
   return window['go']['main']['App']['GetDeviceName']();
 }
 
+export function GetHomeDir() {
+  return window['go']['main']['App']['GetHomeDir']();
+}
+
 export function GetHostName() {
   return window['go']['main']['App']['GetHostName']();
 }
@@ -36,6 +40,10 @@ export function GetRemoteFiles(arg1, arg2, arg3) {
 
 export function GetSessionToken(arg1) {
   return window['go']['main']['App']['GetSessionToken'](arg1);
+}
+
+export function GetSharedDir() {
+  return window['go']['main']['App']['GetSharedDir']();
 }
 
 export function IdentifyDevice(arg1) {
@@ -64,6 +72,10 @@ export function RequestConnection(arg1, arg2) {
 
 export function SaveDeviceName(arg1) {
   return window['go']['main']['App']['SaveDeviceName'](arg1);
+}
+
+export function SaveSharedDir(arg1) {
+  return window['go']['main']['App']['SaveSharedDir'](arg1);
 }
 
 export function SelectDirectory() {

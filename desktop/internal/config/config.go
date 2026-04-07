@@ -8,6 +8,7 @@ import (
 
 type Config struct {
 	DeviceName string `json:"deviceName"`
+	SharedDir  string `json:"sharedDir"`
 }
 
 func GetConfigPath() string {

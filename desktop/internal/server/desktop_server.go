@@ -33,15 +33,24 @@ type DesktopServer struct {
 }
 
 func NewDesktopServer(sm *auth.SessionManager, cm *clipboard.ClipboardManager) *DesktopServer {
+	// 1. Load the saved configuration
+	cfg := config.Load()
+
+	// 2. Default to Home Directory ONLY if the user hasn't saved a custom path
+	startupDir := cfg.SharedDir
+	if startupDir == "" {
+		startupDir, _ = os.UserHomeDir()
+	}
+
+	// (Optional: Still ensure a default LanSync downloads folder exists inside home)
 	homeDir, _ := os.UserHomeDir()
-	sharedFolder := filepath.Join(homeDir, "Downloads", "LanSync")
-	os.MkdirAll(sharedFolder, 0755)
+	os.MkdirAll(filepath.Join(homeDir, "Downloads", "LanSync"), 0755)
 
 	return &DesktopServer{
 		sessionManager:   sm,
 		clipboardManager: cm,
 		pendingRequests:  make(map[string]chan bool),
-		SharedDir:        homeDir,
+		SharedDir:        startupDir,
 	}
 }
 

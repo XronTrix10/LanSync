@@ -74,7 +74,7 @@ export function Sidebar({
           {localDeviceName || "My Device"}
         </div>
 
-        <div className="flex justify-between">
+        <div className="flex justify-between items-start">
           <div className="flex flex-col gap-1.5">
             {localIPs.map((ip, _index) => (
               <div

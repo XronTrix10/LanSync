@@ -11,6 +11,8 @@ export function DownloadFolder(arg1:string,arg2:string,arg3:string):Promise<stri
 
 export function GetDeviceName():Promise<string>;
 
+export function GetHomeDir():Promise<string>;
+
 export function GetHostName():Promise<string>;
 
 export function GetLocalIPs():Promise<Array<string>>;
@@ -18,6 +20,8 @@ export function GetLocalIPs():Promise<Array<string>>;
 export function GetRemoteFiles(arg1:string,arg2:string,arg3:string):Promise<Record<string, any>>;
 
 export function GetSessionToken(arg1:string):Promise<string>;
+
+export function GetSharedDir():Promise<string>;
 
 export function IdentifyDevice(arg1:string):Promise<any>;
 
@@ -32,6 +36,8 @@ export function RejectConnection(arg1:string):Promise<void>;
 export function RequestConnection(arg1:string,arg2:string):Promise<string>;
 
 export function SaveDeviceName(arg1:string):Promise<void>;
+
+export function SaveSharedDir(arg1:string):Promise<void>;
 
 export function SelectDirectory():Promise<string>;
 
