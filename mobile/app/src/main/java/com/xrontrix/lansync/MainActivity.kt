@@ -332,22 +332,38 @@ class MainActivity : ComponentActivity(), BridgeCallback {
                                 onSaveName = { name ->
                                     sharedPrefs.edit { putString("device_name", name) }
                                     try { Bridge.setDeviceName(name) } catch (e: Exception) {}
-                                    Toast.makeText(this@MainActivity, "Name saved!", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(this@MainActivity, "Saved changes!", Toast.LENGTH_SHORT).show()
                                 },
                                 onUpdateDownloadFolder = { downloadUri ->
                                     sharedPrefs.edit { putString("download_folder", downloadUri) }
                                     try {
-                                        contentResolver.takePersistableUriPermission(downloadUri.toUri(), Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                                        contentResolver.takePersistableUriPermission(
+                                            downloadUri.toUri(),
+                                            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                                        )
                                     } catch (e: Exception) { e.printStackTrace() }
-                                    Toast.makeText(this@MainActivity, "Download folder updated!", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(this@MainActivity, "Changed download folder", Toast.LENGTH_SHORT).show()
                                 },
                                 onUpdateExposedFolder = { exposedUri ->
                                     sharedPrefs.edit { putString("exposed_folder", exposedUri) }
-                                    try { Bridge.updateExposedDir(getRealPathFromURI(exposedUri)) } catch (e: Exception) {}
-                                    try {
-                                        contentResolver.takePersistableUriPermission(exposedUri.toUri(), Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                                    } catch (e: Exception) { e.printStackTrace() }
-                                    Toast.makeText(this@MainActivity, "Exposed folder updated!", Toast.LENGTH_SHORT).show()
+
+                                    if (exposedUri == "ROOT") {
+                                        // ── RAW FILE API BYPASS ──
+                                        // Pass "ROOT" directly to Go so it knows to use /storage/emulated/0
+                                        // We skip takePersistableUriPermission because MANAGE_EXTERNAL_STORAGE handles it!
+                                        try { Bridge.updateExposedDir("ROOT") } catch (e: Exception) {}
+                                    } else {
+                                        // ── STANDARD SAF PIPELINE ──
+                                        try { Bridge.updateExposedDir(getRealPathFromURI(exposedUri)) } catch (e: Exception) {}
+                                        try {
+                                            contentResolver.takePersistableUriPermission(
+                                                exposedUri.toUri(),
+                                                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                                            )
+                                        } catch (e: Exception) { e.printStackTrace() }
+                                    }
+
+                                    Toast.makeText(this@MainActivity, "Changed exposed folder", Toast.LENGTH_SHORT).show()
                                 }
                             )
                         }

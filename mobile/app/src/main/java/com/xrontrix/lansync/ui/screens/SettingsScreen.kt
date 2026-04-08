@@ -1,5 +1,8 @@
 package com.xrontrix.lansync.ui.screens
 
+import android.content.Intent
+import android.os.Environment
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -12,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -19,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xrontrix.lansync.ui.theme.*
 import com.xrontrix.lansync.R
+import androidx.core.net.toUri
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,9 +37,10 @@ fun SettingsScreen(
 ) {
     var deviceName by remember { mutableStateOf(currentDeviceName) }
 
-    // ── Local states so the UI updates the millisecond you click ──
     var downloadFolderUri by remember { mutableStateOf(currentDownloadFolderUri) }
     var exposedFolderUri by remember { mutableStateOf(currentExposedFolderUri) }
+
+    val context = LocalContext.current
 
     val downloadPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
@@ -162,8 +168,24 @@ fun SettingsScreen(
                 color = Panel, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Surface),
                 modifier = Modifier.weight(1f),
                 onClick = {
-                    exposedFolderUri = "ROOT"
-                    onUpdateExposedFolder("ROOT")
+                    val hasAllFilesAccess =
+                        Environment.isExternalStorageManager()
+
+                    if (hasAllFilesAccess) {
+                        // Permission already granted! Activate raw File API.
+                        exposedFolderUri = "ROOT"
+                        onUpdateExposedFolder("ROOT")
+                    } else {
+                        // Request the permission
+                        try {
+                            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                            intent.data = "package:${context.packageName}".toUri()
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                            context.startActivity(intent)
+                        }
+                    }
                 }
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {

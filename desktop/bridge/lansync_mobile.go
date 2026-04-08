@@ -40,7 +40,6 @@ var (
 	cbProxy *androidBridgeProxy
 )
 
-// 1. ADDED CONNECTION PROMPT HOOK
 type BridgeCallback interface {
 	OnDeviceDropped(ip string)
 	OnClipboardDataReceived(data []byte, contentType string)
@@ -71,7 +70,6 @@ func StartupWithCallback(cb BridgeCallback) {
 	go desktopServer.Start("34932")
 }
 
-// 2. DYNAMIC STATE UPDATERS (Callable from Kotlin)
 func SetDeviceName(name string) { mobileDeviceName = name }
 
 func UpdateExposedDir(dir string) {
@@ -80,9 +78,13 @@ func UpdateExposedDir(dir string) {
 	dirMutex.Unlock()
 }
 
+// ── Intercept ROOT and switch to the raw native File API ──
 func getExposedDir() string {
 	dirMutex.RLock()
 	defer dirMutex.RUnlock()
+	if currentExposedDir == "ROOT" {
+		return "/storage/emulated/0"
+	}
 	return currentExposedDir
 }
 
@@ -125,7 +127,6 @@ func MakeDirectory(ip string, port string, dir string, name string) error {
 	return androidClient.MakeDirectory(ip, port, dir, name)
 }
 
-// 3. UPDATED MOBILE BACKEND
 func StartMobileServer() {
 	go func() {
 		mux := http.NewServeMux()
@@ -157,7 +158,6 @@ func StartMobileServer() {
 			})
 		})
 
-		// 4. ADDED UI PROMPT AND REVERSE HEARTBEAT!
 		mux.HandleFunc("/api/connect", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			var req models.ConnectionRequest
@@ -173,7 +173,6 @@ func StartMobileServer() {
 			pendingRequests[clientIP] = decisionChan
 			prMutex.Unlock()
 
-			// Tell Kotlin to pop up the Accept/Reject Dialog
 			if cbProxy != nil && cbProxy.cb != nil {
 				cbProxy.cb.OnConnectionRequested(clientIP, req.DeviceName)
 			}
@@ -184,7 +183,6 @@ func StartMobileServer() {
 					tokenForA := sessionManager.GenerateToken()
 					sessionManager.RegisterSession(clientIP, tokenForA, req.TokenForB)
 
-					// KEEP DESKTOP ALIVE! Send reverse ping
 					go func(ip, port, token string) {
 						for {
 							time.Sleep(5 * time.Second)
@@ -199,7 +197,6 @@ func StartMobileServer() {
 							if err != nil || resp.StatusCode != http.StatusOK {
 								sessionManager.RemoveSession(ip)
 
-								// ── FIX: Explicitly force the Kotlin UI to drop! ──
 								if cbProxy != nil && cbProxy.cb != nil {
 									cbProxy.cb.OnDeviceDropped(ip)
 								}
@@ -228,10 +225,8 @@ func StartMobileServer() {
 			clientIP, _, _ := net.SplitHostPort(r.RemoteAddr)
 			clientIP = strings.TrimPrefix(clientIP, "::ffff:")
 
-			// Remove the session from the backend
 			sessionManager.RemoveSession(clientIP)
 
-			// ── FIX: Explicitly force the Kotlin UI to drop! ──
 			if cbProxy != nil && cbProxy.cb != nil {
 				cbProxy.cb.OnDeviceDropped(clientIP)
 			}
@@ -239,7 +234,6 @@ func StartMobileServer() {
 			w.WriteHeader(http.StatusOK)
 		}))
 
-		// 5. USING DYNAMIC EXPOSED DIRECTORY FOR ALL FILES
 		mux.HandleFunc("/api/files/list", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			requestedPath := r.URL.Query().Get("path")
