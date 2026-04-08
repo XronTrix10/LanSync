@@ -33,7 +33,7 @@ export function FileRow({
           style={{ color: iconColor, flexShrink: 0 }}
         />
         <span
-          className={`text-[13px] truncate leading-none transition-colors ${
+          className={`text-[13px] truncate transition-colors ${
             file.isDir
               ? "text-text font-medium group-hover:text-light"
               : "text-light group-hover:text-text"
