@@ -159,7 +159,7 @@ export function FileBrowser({
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-surface text-dull">
         <div className="relative">
-          <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-border flex items-center justify-center">
+          <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-dull flex items-center justify-center">
             <Layers size={32} strokeWidth={1} />
           </div>
           <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-accent/15 border border-accent/30 flex items-center justify-center">

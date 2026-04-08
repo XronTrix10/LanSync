@@ -44,7 +44,7 @@ export function TransferDrawer({ transfers }: Props) {
                 style={{
                   width: `${t.percent}%`,
                   background:
-                    "linear-gradient(90deg, #f58e2f 0%, #ffd2bf 100%)",
+                    "linear-gradient(90deg, #F58E2F 0%, #FFDF00 100%)",
                   boxShadow: `0 0 8px rgba(61,158,255,0.4)`,
                 }}
               />
