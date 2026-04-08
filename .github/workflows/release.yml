@@ -23,7 +23,7 @@ jobs:
             platform: darwin/amd64
             artifact_name: macos-amd64
             build_flags: ""
-          - os: macos-latest
+          - os: macos-26 # runs on latest Tahoe
             platform: darwin/arm64 # Apple Silicon
             artifact_name: macos-arm64
             build_flags: ""
