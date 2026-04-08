@@ -303,7 +303,7 @@ export function FileBrowser({
         onClick={(e) => e.stopPropagation()}
       >
         {showFabMenu && (
-          <div className="rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.5)] py-1.5 px-1.5 w-40 flex flex-col items-end gap-y-2 animate-in slide-in-from-bottom-2 fade-in duration-150">
+          <div className="rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.5)] py-1.5 w-40 flex flex-col items-end gap-y-2 animate-in slide-in-from-bottom-2 fade-in duration-150">
             <button
               onClick={() => {
                 setShowFabMenu(false);
