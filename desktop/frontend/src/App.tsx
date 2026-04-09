@@ -128,7 +128,7 @@ export default function App() {
     if (savedDevices) {
       try {
         setRecentDevices(JSON.parse(savedDevices));
-      } catch (e) {}
+      } catch (e) { }
     }
 
     Environment().then((env) => setOs(env.platform));
@@ -347,7 +347,12 @@ export default function App() {
         );
       }
     } catch (err: any) {
-      showToast(`Download failed: ${err.message || String(err)}`, "error");
+      const msg = err.message || String(err);
+      if (msg.toLowerCase().includes("cancelled")) {
+        showToast("Download was cancelled", "error");
+      } else {
+        showToast(`Download failed: ${msg}`, "error");
+      }
     }
   };
 
@@ -372,7 +377,12 @@ export default function App() {
         getBaseDirName(path),
       );
     } catch (err: any) {
-      showToast(`Upload failed: ${err.message || String(err)}`, "error");
+      const msg = err.message || String(err);
+      if (msg.toLowerCase().includes("cancelled")) {
+        showToast("Upload was cancelled", "error");
+      } else {
+        showToast(`Upload failed: ${msg}`, "error");
+      }
     }
   };
 
@@ -397,7 +407,12 @@ export default function App() {
         getBaseDirName(path),
       );
     } catch (err: any) {
-      showToast(`Folder upload failed: ${err.message || String(err)}`, "error");
+      const msg = err.message || String(err);
+      if (msg.toLowerCase().includes("cancelled")) {
+        showToast("Folder upload was cancelled", "error");
+      } else {
+        showToast(`Folder upload failed: ${msg}`, "error");
+      }
     }
   };
 

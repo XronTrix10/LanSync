@@ -31,6 +31,7 @@ func NewApp() *App { return &App{} }
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.sessionManager = auth.NewSessionManager(func(droppedIP string) {
+		a.CancelTransfers(droppedIP) // Ensures disconnect sweeps all streams
 		runtime.EventsEmit(a.ctx, "connection_lost", droppedIP)
 	})
 
@@ -44,17 +45,20 @@ func (a *App) startup(ctx context.Context) {
 
 // ── THE KILL SWITCH TRIGGER (Called from React UI) ──
 func (a *App) CancelTransfers(ip string) {
-	// 1. Kill local receiving streams immediately
+	// 1. Kill local Desktop SERVER receiving streams
 	server.CancelTransfersForIP(ip)
 
-	// 2. Tell the Mobile device over network to kill its streams
+	// 2. Kill local Desktop CLIENT sending/downloading streams
+	client.CancelClientTransfersForIP(ip)
+
+	// 3. Tell the Mobile device over network to kill its streams too
 	token := a.sessionManager.GetOutboundToken(ip)
 	if token != "" {
 		go func() {
 			req, _ := http.NewRequest("POST", fmt.Sprintf("http://%s:34931/api/files/cancel", ip), nil)
 			req.Header.Set("Authorization", "Bearer "+token)
-			client := http.Client{Timeout: 2 * time.Second}
-			client.Do(req)
+			c := http.Client{Timeout: 2 * time.Second}
+			c.Do(req)
 		}()
 	}
 }
@@ -67,17 +71,43 @@ func (a *App) AcceptConnection(ip string) { a.desktopServer.ResolveConnection(ip
 func (a *App) RejectConnection(ip string) { a.desktopServer.ResolveConnection(ip, false) }
 
 func (a *App) Disconnect(ip string) {
+	// Execute the full kill sequence on disconnect
+	a.CancelTransfers(ip)
+
 	token := a.sessionManager.GetOutboundToken(ip)
 	if token != "" {
 		go func() {
 			req, _ := http.NewRequest("POST", fmt.Sprintf("http://%s:34931/api/disconnect", ip), nil)
 			req.Header.Set("Authorization", "Bearer "+token)
-			client := http.Client{Timeout: 2 * time.Second}
-			client.Do(req)
+			c := http.Client{Timeout: 2 * time.Second}
+			c.Do(req)
 		}()
 	}
 	a.sessionManager.RemoveSession(ip)
 	runtime.EventsEmit(a.ctx, "connection_lost", ip)
+}
+
+// Helper to check target space before transfers
+func (a *App) checkTargetSpace(ip string, requiredBytes int64) error {
+	token := a.sessionManager.GetOutboundToken(ip)
+	req, _ := http.NewRequest("GET", fmt.Sprintf("http://%s:34931/api/system/space", ip), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	client := http.Client{Timeout: 3 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil || resp.StatusCode != 200 {
+		return nil
+	}
+	defer resp.Body.Close()
+
+	var data map[string]uint64
+	// json.NewDecoder(resp.Body).Decode(&data)
+	if free, ok := data["free_space"]; ok {
+		if uint64(requiredBytes) > (free - 50_000_000) {
+			return fmt.Errorf("not enough space on target device. Requires %d MB but only %d MB free", requiredBytes/1024/1024, free/1024/1024)
+		}
+	}
+	return nil
 }
 
 func (a *App) GetLocalIPs() []string { return sys.GetLocalIPs() }
@@ -95,9 +125,30 @@ func (a *App) GetRemoteFiles(ip string, port string, path string) (map[string]in
 	return a.androidClient.GetRemoteFiles(ip, port, path)
 }
 func (a *App) PushToAndroid(ip string, port string, dir string, paths []string) error {
+	// Pre-Flight Size Check
+	var totalSize int64
+	for _, p := range paths {
+		if info, err := os.Stat(p); err == nil {
+			totalSize += info.Size()
+		}
+	}
+	if err := a.checkTargetSpace(ip, totalSize); err != nil {
+		return err
+	}
 	return a.androidClient.PushToAndroid(ip, port, dir, paths)
 }
 func (a *App) PushFolderToAndroid(ip string, port string, dir string, local string) error {
+	// Pre-Flight Size Check
+	var totalSize int64
+	filepath.Walk(local, func(_ string, info os.FileInfo, _ error) error {
+		if info != nil && !info.IsDir() {
+			totalSize += info.Size()
+		}
+		return nil
+	})
+	if err := a.checkTargetSpace(ip, totalSize); err != nil {
+		return err
+	}
 	return a.androidClient.PushFolderToAndroid(ip, port, dir, local)
 }
 func (a *App) SelectFiles() ([]string, error) {

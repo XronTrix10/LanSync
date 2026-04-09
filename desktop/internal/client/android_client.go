@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	stdruntime "runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"lansync/internal/auth"
@@ -21,6 +22,45 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
+
+// ── CONTEXT-AWARE TRANSFER REGISTRY FOR DESKTOP CLIENT ──
+var (
+	clientTransferMutex   sync.Mutex
+	activeClientTransfers = make(map[string][]context.CancelFunc)
+)
+
+func registerClientTransfer(ip string, cancel context.CancelFunc) {
+	clientTransferMutex.Lock()
+	activeClientTransfers[ip] = append(activeClientTransfers[ip], cancel)
+	clientTransferMutex.Unlock()
+}
+
+func CancelClientTransfersForIP(ip string) {
+	clientTransferMutex.Lock()
+	if cancels, exists := activeClientTransfers[ip]; exists {
+		for _, c := range cancels {
+			c()
+		}
+		delete(activeClientTransfers, ip)
+	}
+	clientTransferMutex.Unlock()
+}
+
+type ctxReader struct {
+	r   io.Reader
+	ctx context.Context
+}
+
+func (cr *ctxReader) Read(p []byte) (int, error) {
+	select {
+	case <-cr.ctx.Done():
+		return 0, cr.ctx.Err()
+	default:
+		return cr.r.Read(p)
+	}
+}
+
+// ────────────────────────────────────────────────────────
 
 type AndroidClient struct {
 	ctx            context.Context
@@ -31,7 +71,6 @@ func NewAndroidClient(ctx context.Context, sm *auth.SessionManager) *AndroidClie
 	return &AndroidClient{ctx: ctx, sessionManager: sm}
 }
 
-// FIX: Automatically sweep ports to find if device is PC (34931) or Mobile (34932)
 func (c *AndroidClient) IdentifyDevice(inputIP string) (models.DeviceIdentity, error) {
 	portsToTry := []string{"34931", "34932"}
 
@@ -63,7 +102,7 @@ func (c *AndroidClient) RequestConnection(targetIP string, targetPort string, my
 		DeviceIdentity: models.DeviceIdentity{
 			IP:         sys.GetLocalIPs()[0],
 			Port:       "34931",
-			DeviceName: myDeviceName, // <-- Send the explicitly passed name
+			DeviceName: myDeviceName,
 			OS:         stdruntime.GOOS,
 			Type:       "desktop",
 		},
@@ -143,8 +182,14 @@ func (c *AndroidClient) StreamFileFromAndroid(ip string, port string, path strin
 	params.Add("path", path)
 	baseURL.RawQuery = params.Encode()
 
-	req, _ := http.NewRequest("GET", baseURL.String(), nil)
+	// ── Hook into the Context Registry ──
+	transferCtx, cancelTransfer := context.WithCancel(c.ctx)
+	registerClientTransfer(ip, cancelTransfer)
+	defer cancelTransfer()
+
+	req, _ := http.NewRequestWithContext(transferCtx, "GET", baseURL.String(), nil)
 	req.Header.Set("Authorization", "Bearer "+c.sessionManager.GetOutboundToken(ip))
+	req.Header.Set("Accept-Encoding", "identity") // Ensure no gzip so length is accurate
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -156,14 +201,28 @@ func (c *AndroidClient) StreamFileFromAndroid(ip string, port string, path strin
 		return fmt.Errorf("error: %s", resp.Status)
 	}
 
-	f, _ := os.Create(destPath)
-	defer f.Close()
-	tracker := NewProgressTracker(c.ctx, resp.Body, filepath.Base(destPath), resp.ContentLength, "dl")
-	_, err = io.Copy(f, tracker)
-	if err == nil {
-		runtime.EventsEmit(c.ctx, "transfer_complete", tracker.GetID())
+	f, err := os.Create(destPath)
+	if err != nil {
+		return err
 	}
-	return err
+
+	tracker := NewProgressTracker(c.ctx, resp.Body, filepath.Base(destPath), resp.ContentLength, "dl")
+
+	// Ensure UI clears the progress bar when done or cancelled
+	defer runtime.EventsEmit(c.ctx, "transfer_complete", tracker.GetID())
+
+	_, copyErr := io.Copy(f, &ctxReader{r: tracker, ctx: transferCtx})
+	f.Close() // Must close before we can remove it
+
+	// ── GHOST FILE ROLLBACK ──
+	if copyErr != nil {
+		os.Remove(destPath)
+		if transferCtx.Err() != nil {
+			return fmt.Errorf("Transfer was cancelled")
+		}
+		return copyErr
+	}
+	return nil
 }
 
 func (c *AndroidClient) PullDirectoryRecursive(ip, port, path, destDir string) error {
@@ -182,9 +241,15 @@ func (c *AndroidClient) PullDirectoryRecursive(ip, port, path, destDir string) e
 		destPath := filepath.Join(destDir, fileMap["name"].(string))
 		if fileMap["isDir"].(bool) {
 			os.MkdirAll(destPath, 0755)
-			c.PullDirectoryRecursive(ip, port, fileMap["path"].(string), destPath)
+			err = c.PullDirectoryRecursive(ip, port, fileMap["path"].(string), destPath)
+			if err != nil {
+				return err
+			} // Bubble up cancellation to stop loop
 		} else {
-			c.StreamFileFromAndroid(ip, port, fileMap["path"].(string), destPath)
+			err = c.StreamFileFromAndroid(ip, port, fileMap["path"].(string), destPath)
+			if err != nil {
+				return err
+			} // Bubble up cancellation to stop loop
 		}
 	}
 	return nil
@@ -193,7 +258,7 @@ func (c *AndroidClient) PullDirectoryRecursive(ip, port, path, destDir string) e
 func (c *AndroidClient) PushToAndroid(ip, port, targetDir string, filePaths []string) error {
 	for _, path := range filePaths {
 		if err := c.uploadSingleFile(ip, port, targetDir, path); err != nil {
-			return err
+			return err // Stops subsequent files if cancelled
 		}
 	}
 	return nil
@@ -229,6 +294,11 @@ func (c *AndroidClient) uploadSingleFile(ip, port, targetDir, filePath string) e
 	params.Add("name", filepath.Base(filePath))
 	baseURL.RawQuery = params.Encode()
 
+	// ── Hook into the Context Registry ──
+	transferCtx, cancelTransfer := context.WithCancel(c.ctx)
+	registerClientTransfer(ip, cancelTransfer)
+	defer cancelTransfer()
+
 	pr, pw := io.Pipe()
 	writer := multipart.NewWriter(pw)
 	tracker := NewProgressTracker(c.ctx, file, filepath.Base(filePath), stat.Size(), "ul")
@@ -236,12 +306,13 @@ func (c *AndroidClient) uploadSingleFile(ip, port, targetDir, filePath string) e
 	go func() {
 		defer pw.Close()
 		defer writer.Close()
+		defer runtime.EventsEmit(c.ctx, "transfer_complete", tracker.GetID())
 		part, _ := writer.CreateFormFile("files", filepath.Base(filePath))
-		io.Copy(part, tracker)
-		runtime.EventsEmit(c.ctx, "transfer_complete", tracker.GetID())
+		// Triggers instant halt if Context is aborted
+		io.Copy(part, &ctxReader{r: tracker, ctx: transferCtx})
 	}()
 
-	req, _ := http.NewRequest("POST", baseURL.String(), pr)
+	req, _ := http.NewRequestWithContext(transferCtx, "POST", baseURL.String(), pr)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	req.Header.Set("Authorization", "Bearer "+c.sessionManager.GetOutboundToken(ip))
 
@@ -251,10 +322,13 @@ func (c *AndroidClient) uploadSingleFile(ip, port, targetDir, filePath string) e
 	runtime.EventsEmit(c.ctx, "upload_complete")
 
 	if err != nil {
+		if transferCtx.Err() != nil {
+			return fmt.Errorf("Transfer was cancelled")
+		}
 		return fmt.Errorf("upload failed: %v", err)
 	}
+	defer resp.Body.Close()
 
-	// FIX: Return the exact server error message so it shows up in React's Toast notification
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("Server Error %d: %s", resp.StatusCode, string(bodyBytes))
