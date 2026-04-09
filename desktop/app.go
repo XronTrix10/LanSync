@@ -42,6 +42,23 @@ func (a *App) startup(ctx context.Context) {
 	go a.desktopServer.Start("34931")
 }
 
+// ── THE KILL SWITCH TRIGGER (Called from React UI) ──
+func (a *App) CancelTransfers(ip string) {
+	// 1. Kill local receiving streams immediately
+	server.CancelTransfersForIP(ip)
+
+	// 2. Tell the Mobile device over network to kill its streams
+	token := a.sessionManager.GetOutboundToken(ip)
+	if token != "" {
+		go func() {
+			req, _ := http.NewRequest("POST", fmt.Sprintf("http://%s:34931/api/files/cancel", ip), nil)
+			req.Header.Set("Authorization", "Bearer "+token)
+			client := http.Client{Timeout: 2 * time.Second}
+			client.Do(req)
+		}()
+	}
+}
+
 func (a *App) RequestConnection(ip string, port string) (string, error) {
 	return a.androidClient.RequestConnection(ip, port, config.Load().DeviceName)
 }
@@ -52,7 +69,6 @@ func (a *App) RejectConnection(ip string) { a.desktopServer.ResolveConnection(ip
 func (a *App) Disconnect(ip string) {
 	token := a.sessionManager.GetOutboundToken(ip)
 	if token != "" {
-		// Fire a polite disconnect signal to the mobile device
 		go func() {
 			req, _ := http.NewRequest("POST", fmt.Sprintf("http://%s:34931/api/disconnect", ip), nil)
 			req.Header.Set("Authorization", "Bearer "+token)
@@ -64,9 +80,7 @@ func (a *App) Disconnect(ip string) {
 	runtime.EventsEmit(a.ctx, "connection_lost", ip)
 }
 
-func (a *App) GetLocalIPs() []string {
-	return sys.GetLocalIPs()
-}
+func (a *App) GetLocalIPs() []string { return sys.GetLocalIPs() }
 func (a *App) GetHostName() string {
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -95,45 +109,34 @@ func (a *App) SelectDirectory() (string, error) {
 func (a *App) MakeDirectory(ip string, port string, dir string, name string) error {
 	return a.androidClient.MakeDirectory(ip, port, dir, name)
 }
-func (a *App) GetSessionToken(ip string) string {
-	return a.sessionManager.GetOutboundToken(ip)
-}
-
-// GetHomeDir returns the OS home directory so the frontend can format paths as ~/
+func (a *App) GetSessionToken(ip string) string { return a.sessionManager.GetOutboundToken(ip) }
 func (a *App) GetHomeDir() string {
 	home, _ := os.UserHomeDir()
 	return home
 }
-
-// GetSharedDir loads the saved shared directory from config, defaulting to Home
 func (a *App) GetSharedDir() string {
 	cfg := config.Load()
-	if cfg.SharedDir == "" { // Assuming you add SharedDir to your config struct
+	if cfg.SharedDir == "" {
 		home, _ := os.UserHomeDir()
 		return home
 	}
 	return cfg.SharedDir
 }
-
-// SaveSharedDir saves the new path and live-updates the running server
 func (a *App) SaveSharedDir(path string) error {
 	cfg := config.Load()
 	cfg.SharedDir = path
 	err := config.Save(cfg)
 	if err == nil {
-		// Live-update the running server so the user doesn't have to restart
 		a.desktopServer.SharedDir = path
 	}
 	return err
 }
-
 func (a *App) ShareClipboardText(ip string, port string) error {
 	if a.sessionManager.GetOutboundToken(ip) == "" {
 		return fmt.Errorf("device not securely connected")
 	}
 	return a.clipboardManager.ShareDesktopText(ip, port)
 }
-
 func (a *App) DownloadFile(ip string, port string, path string) (string, error) {
 	destPath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
 		Title: "Save File", DefaultFilename: filepath.Base(path),
@@ -144,19 +147,12 @@ func (a *App) DownloadFile(ip string, port string, path string) (string, error) 
 	err = a.androidClient.StreamFileFromAndroid(ip, port, path, destPath)
 	return destPath, err
 }
-
-// GetDeviceName returns the current custom name for the frontend
-func (a *App) GetDeviceName() string {
-	return config.Load().DeviceName
-}
-
-// SaveDeviceName saves a new custom name and returns any errors
+func (a *App) GetDeviceName() string { return config.Load().DeviceName }
 func (a *App) SaveDeviceName(name string) error {
 	cfg := config.Load()
 	cfg.DeviceName = name
 	return config.Save(cfg)
 }
-
 func (a *App) DownloadFolder(ip string, port string, path string) (string, error) {
 	parentDir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
 		Title: "Select Destination",

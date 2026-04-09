@@ -1,12 +1,13 @@
-import { ArrowDownToLine, Clock, Zap } from "lucide-react";
+import { ArrowDownToLine, Clock, Zap, XCircle } from "lucide-react";
 import type { TransferProgress } from "../types";
 import { formatETA } from "../types";
 
 interface Props {
   transfers: Record<string, TransferProgress>;
+  onCancelAll?: () => void;
 }
 
-export function TransferDrawer({ transfers }: Props) {
+export function TransferDrawer({ transfers, onCancelAll }: Props) {
   const items = Object.values(transfers);
   if (items.length === 0) return null;
 
@@ -18,9 +19,19 @@ export function TransferDrawer({ transfers }: Props) {
         <span className="text-[10px] font-bold tracking-[0.12em] uppercase text-light">
           Active Transfers
         </span>
-        <span className="ml-auto flex items-center justify-center w-5 h-5 rounded-full bg-accent/15 text-accent text-[10px] font-bold font-mono">
+        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-accent/15 text-accent text-[10px] font-bold font-mono">
           {items.length}
         </span>
+
+        {/* The Cancel All Button */}
+        {onCancelAll && (
+          <button
+            onClick={onCancelAll}
+            className="ml-auto text-red-400 hover:text-red-500 transition-colors flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider"
+          >
+            <XCircle size={14} /> Cancel
+          </button>
+        )}
       </div>
 
       {/* Transfer items */}

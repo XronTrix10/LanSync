@@ -23,6 +23,46 @@ import (
 	"lansync/internal/models"
 )
 
+// ── CONTEXT-AWARE TRANSFER REGISTRY ──
+var (
+	transferMutex   sync.Mutex
+	activeTransfers = make(map[string][]context.CancelFunc)
+)
+
+func registerTransfer(ip string, cancel context.CancelFunc) {
+	transferMutex.Lock()
+	activeTransfers[ip] = append(activeTransfers[ip], cancel)
+	transferMutex.Unlock()
+}
+
+// Exported so app.go can call it locally
+func CancelTransfersForIP(ip string) {
+	transferMutex.Lock()
+	if cancels, exists := activeTransfers[ip]; exists {
+		for _, c := range cancels {
+			c()
+		}
+		delete(activeTransfers, ip)
+	}
+	transferMutex.Unlock()
+}
+
+type ctxReader struct {
+	r   io.Reader
+	ctx context.Context
+}
+
+func (cr *ctxReader) Read(p []byte) (int, error) {
+	select {
+	case <-cr.ctx.Done():
+		return 0, cr.ctx.Err()
+	default:
+		return cr.r.Read(p)
+	}
+}
+
+// ────────────────────────────────────────────────────────────
+
 type DesktopServer struct {
 	ctx              context.Context
 	sessionManager   *auth.SessionManager
@@ -33,16 +73,12 @@ type DesktopServer struct {
 }
 
 func NewDesktopServer(sm *auth.SessionManager, cm *clipboard.ClipboardManager) *DesktopServer {
-	// 1. Load the saved configuration
 	cfg := config.Load()
-
-	// 2. Default to Home Directory ONLY if the user hasn't saved a custom path
 	startupDir := cfg.SharedDir
 	if startupDir == "" {
 		startupDir, _ = os.UserHomeDir()
 	}
 
-	// (Optional: Still ensure a default LanSync downloads folder exists inside home)
 	homeDir, _ := os.UserHomeDir()
 	os.MkdirAll(filepath.Join(homeDir, "Downloads", "LanSync"), 0755)
 
@@ -72,10 +108,11 @@ func (s *DesktopServer) Start(port string) {
 	mux.HandleFunc("/api/clipboard/share", s.authMiddleware(s.handleClipboardShare))
 	mux.HandleFunc("/api/disconnect", s.authMiddleware(s.handleDisconnect))
 
+	// ── THE KILL SWITCH ROUTE ──
+	mux.HandleFunc("/api/files/cancel", s.authMiddleware(s.handleCancel))
+
 	http.ListenAndServe(":"+port, mux)
 }
-
-// ─── UTILITIES ────────────────────────────────────────────────────────────
 
 func (s *DesktopServer) authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -104,7 +141,6 @@ func (s *DesktopServer) authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// resolvePath forces all virtual requests (e.g. "/Photos") to physical locations safely
 func (s *DesktopServer) resolvePath(reqPath string) (string, string, error) {
 	if reqPath == "" {
 		reqPath = "/"
@@ -112,14 +148,11 @@ func (s *DesktopServer) resolvePath(reqPath string) (string, string, error) {
 	cleanVirtual := filepath.Clean("/" + reqPath)
 	absPhysical := filepath.Join(s.SharedDir, cleanVirtual)
 
-	// Block Path Traversal (Jailbreak attempt)
 	if !strings.HasPrefix(absPhysical, s.SharedDir) {
 		return "", "", fmt.Errorf("path traversal denied")
 	}
 	return absPhysical, cleanVirtual, nil
 }
-
-// ─── HANDSHAKE ────────────────────────────────────────────────────────────
 
 func (s *DesktopServer) handleConnect(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -192,9 +225,16 @@ func (s *DesktopServer) handleDisconnect(w http.ResponseWriter, r *http.Request)
 	}
 	clientIP = strings.TrimPrefix(clientIP, "::ffff:")
 
-	// Instantly kill the session and notify the Wails React frontend!
+	CancelTransfersForIP(clientIP) // Kills transfers before closing session
 	s.sessionManager.RemoveSession(clientIP)
 	runtime.EventsEmit(s.ctx, "connection_lost", clientIP)
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *DesktopServer) handleCancel(w http.ResponseWriter, r *http.Request) {
+	clientIP, _, _ := net.SplitHostPort(r.RemoteAddr)
+	clientIP = strings.TrimPrefix(clientIP, "::ffff:")
+	CancelTransfersForIP(clientIP)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -217,8 +257,6 @@ func (s *DesktopServer) handleIdentify(w http.ResponseWriter, r *http.Request) {
 		Port:       "34931",
 	})
 }
-
-// ─── FILE SYSTEM ROUTES ───────────────────────────────────────────────────
 
 func (s *DesktopServer) handleListFiles(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -247,7 +285,7 @@ func (s *DesktopServer) handleListFiles(w http.ResponseWriter, r *http.Request) 
 
 		files = append(files, models.FileInfo{
 			Name:    entry.Name(),
-			Path:    filepath.ToSlash(filepath.Join(cleanVirtual, entry.Name())), // Return virtual path
+			Path:    filepath.ToSlash(filepath.Join(cleanVirtual, entry.Name())),
 			Size:    info.Size(),
 			IsDir:   entry.IsDir(),
 			ModTime: info.ModTime().Format("2006-01-02 15:04"),
@@ -290,6 +328,7 @@ func (s *DesktopServer) handleDownload(w http.ResponseWriter, r *http.Request) {
 	http.ServeContent(w, r, filepath.Base(absPhysical), info.ModTime(), f)
 }
 
+// ── STREAMING, MEMORY FIX, AND ROLLBACK ──
 func (s *DesktopServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 	absPhysical, _, err := s.resolvePath(r.URL.Query().Get("dir"))
 	if err != nil {
@@ -297,24 +336,52 @@ func (s *DesktopServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// FIX: Automatically build the sub-folder structure before saving the file!
 	os.MkdirAll(absPhysical, 0755)
 
-	r.ParseMultipartForm(10 << 20)
-	file, header, err := r.FormFile("files")
-	if err != nil {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
-	}
-	defer file.Close()
+	clientIP, _, _ := net.SplitHostPort(r.RemoteAddr)
+	clientIP = strings.TrimPrefix(clientIP, "::ffff:")
 
-	dst, err := os.Create(filepath.Join(absPhysical, header.Filename))
+	// Attach this upload stream to the registry
+	transferCtx, cancelTransfer := context.WithCancel(r.Context())
+	registerTransfer(clientIP, cancelTransfer)
+	defer cancelTransfer()
+
+	// Stream directly to avoid 1.5GB RAM crash
+	reader, err := r.MultipartReader()
 	if err != nil {
-		http.Error(w, "Could not save file", http.StatusInternalServerError)
+		http.Error(w, "Failed to read multipart stream", http.StatusBadRequest)
 		return
 	}
-	defer dst.Close()
-	io.Copy(dst, file)
+
+	for {
+		part, err := reader.NextPart()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			continue
+		}
+
+		if part.FormName() == "files" {
+			filename := part.FileName()
+			if filename == "" {
+				continue
+			}
+
+			dst, err := os.Create(filepath.Join(absPhysical, filename))
+			if err == nil {
+				// Use Context-Aware Reader
+				_, copyErr := io.Copy(dst, &ctxReader{r: part, ctx: transferCtx})
+				dst.Close()
+
+				// Delete ghost file if transfer is cancelled or drops!
+				if copyErr != nil {
+					os.Remove(dst.Name())
+					continue
+				}
+			}
+		}
+	}
 
 	w.WriteHeader(http.StatusOK)
 }

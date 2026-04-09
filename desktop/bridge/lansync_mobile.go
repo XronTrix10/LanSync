@@ -44,6 +44,46 @@ var (
 	cbProxy *androidBridgeProxy
 )
 
+// ── CONTEXT-AWARE TRANSFER REGISTRY ──
+var (
+	transferMutex   sync.Mutex
+	activeTransfers = make(map[string][]context.CancelFunc)
+)
+
+// Registers a cancellable context for a specific IP
+func registerTransfer(ip string, cancel context.CancelFunc) {
+	transferMutex.Lock()
+	activeTransfers[ip] = append(activeTransfers[ip], cancel)
+	transferMutex.Unlock()
+}
+
+// Instantly terminates all active transfers for a specific IP
+func cancelTransfersForIP(ip string) {
+	transferMutex.Lock()
+	if cancels, exists := activeTransfers[ip]; exists {
+		for _, cancel := range cancels {
+			cancel() // This fires the abort signal to io.Copy!
+		}
+		delete(activeTransfers, ip)
+	}
+	transferMutex.Unlock()
+}
+
+// Wraps a standard io.Reader so it listens for the abort signal
+type ctxReader struct {
+	r   io.Reader
+	ctx context.Context
+}
+
+func (cr *ctxReader) Read(p []byte) (int, error) {
+	select {
+	case <-cr.ctx.Done():
+		return 0, cr.ctx.Err() // Abort instantly if context is cancelled
+	default:
+		return cr.r.Read(p)
+	}
+}
+
 type BridgeCallback interface {
 	OnDeviceDropped(ip string)
 	OnClipboardDataReceived(data []byte, contentType string)
@@ -123,6 +163,7 @@ func DisconnectDevice(ip string) {
 		go client.Do(req)
 	}
 	sessionManager.RemoveSession(ip)
+	cancelTransfersForIP(ip)
 }
 
 func GetSessionToken(ip string) string { return sessionManager.GetOutboundToken(ip) }
@@ -210,6 +251,7 @@ func StartMobileServer() {
 
 							if err != nil || resp.StatusCode != http.StatusOK {
 								sessionManager.RemoveSession(ip)
+								cancelTransfersForIP(ip)
 								if cbProxy != nil && cbProxy.cb != nil {
 									cbProxy.cb.OnDeviceDropped(ip)
 								}
@@ -292,7 +334,6 @@ func StartMobileServer() {
 			http.ServeFile(w, r, filepath.Join(getExposedDir(), requestedPath))
 		}))
 
-		// ── REAL-TIME STREAMING UPLOAD ──
 		mux.HandleFunc("/api/files/upload", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 			dir := r.URL.Query().Get("dir")
 			if strings.Contains(dir, "..") {
@@ -300,7 +341,14 @@ func StartMobileServer() {
 				return
 			}
 
-			// Bypasses the OS Cache and reads bytes directly from the network stream
+			// ── Attach stream to the Transfer Registry ──
+			clientIP, _, _ := net.SplitHostPort(r.RemoteAddr)
+			clientIP = strings.TrimPrefix(clientIP, "::ffff:")
+
+			transferCtx, cancelTransfer := context.WithCancel(r.Context())
+			registerTransfer(clientIP, cancelTransfer)
+			defer cancelTransfer() // Clean up memory when transfer finishes naturally
+
 			reader, err := r.MultipartReader()
 			if err != nil {
 				http.Error(w, "Failed to read multipart stream", http.StatusBadRequest)
@@ -327,8 +375,14 @@ func StartMobileServer() {
 
 					dst, err := os.Create(filepath.Join(destDir, filename))
 					if err == nil {
-						io.Copy(dst, part) // Streams raw bytes straight to the hard drive
+						// Capture the error from io.Copy!
+						_, copyErr := io.Copy(dst, &ctxReader{r: part, ctx: transferCtx})
 						dst.Close()
+						// If the transfer was cancelled or the network dropped mid-byte, delete it!
+						if copyErr != nil {
+							os.Remove(dst.Name())
+							continue // Skip to the next file (if any) or exit
+						}
 					}
 				}
 			}
@@ -347,6 +401,15 @@ func StartMobileServer() {
 
 		mux.HandleFunc("/api/clipboard/share", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 			clipboardManager.HandleClipboardPost(w, r)
+		}))
+
+		mux.HandleFunc("/api/files/cancel", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+			clientIP, _, _ := net.SplitHostPort(r.RemoteAddr)
+			clientIP = strings.TrimPrefix(clientIP, "::ffff:")
+			
+			// Triggers the exact same kill sequence as a network drop!
+			cancelTransfersForIP(clientIP) 
+			w.WriteHeader(http.StatusOK)
 		}))
 
 		corsHandler := func(next http.Handler) http.Handler {
