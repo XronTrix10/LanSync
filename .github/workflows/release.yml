@@ -63,7 +63,7 @@ jobs:
 
       - name: Sync Desktop & Frontend Versions
         working-directory: ./desktop
-        shell: bash    # ── Forces Windows to run this script using Bash!
+        shell: bash # ── Forces Windows to run this script using Bash!
         run: |
           # 1. Clean the version string (removes 'v' if present)
           VERSION="${{ github.event.inputs.version }}"
@@ -110,7 +110,6 @@ jobs:
           mkdir -p lansync_deb/usr/share/icons/hicolor/512x512/apps
           mkdir -p lansync_deb/DEBIAN
 
-          # Copy the binary for the .deb, leaving the original intact for the tar.gz
           cp LanSync lansync_deb/usr/bin/lansync
           chmod +x lansync_deb/usr/bin/lansync
 
@@ -143,7 +142,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
-          # Uploads zips, installers, .deb files, AND the raw binary (for tarballing)
           path: |
             desktop/build/bin/*.exe
             desktop/build/bin/*.zip
@@ -160,8 +158,37 @@ jobs:
       - name: Setup Java JDK
         uses: actions/setup-java@v4
         with:
-          distribution: "zulu"
-          java-version: "17"
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Setup Android SDK, NDK & CMake
+        run: |
+          # Use sdkmanager to guarantee API 30, build-tools, and a compatible NDK are present
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "platforms;android-30" "build-tools;36.0.0" "ndk;30.0.14904198" "cmake;4.1.2"
+
+          # Expose the NDK home to gomobile
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/30.0.14904198" >> $GITHUB_ENV
+
+      - name: Generate bridge.aar with Gomobile
+        working-directory: ./desktop
+        run: |
+          # Install the gomobile toolchain
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          go install golang.org/x/mobile/cmd/gobind@latest
+
+          # Initialize gomobile (this hooks into the Android SDK/NDK)
+          gomobile init
+
+          # Create the destination directory in the mobile app structure
+          mkdir -p ../mobile/app/libs
+
+          # Bind the Go code into the AAR package
+          gomobile bind -target=android -ldflags="-s -w" -androidapi 30 -o ../mobile/app/libs/bridge.aar ./bridge
 
       - name: Sync Android Versions
         working-directory: ./mobile/app
@@ -169,14 +196,10 @@ jobs:
           VERSION="${{ github.event.inputs.version }}"
           CLEAN_VERSION="${VERSION#v}"
 
-          # 1. Parse version into an auto-incrementing integer (1.2.3 -> 10203)
           IFS='.' read -r major minor patch <<< "$CLEAN_VERSION"
           VERSION_CODE=$((major * 10000 + minor * 100 + patch))
 
-          # 2. Inject the String Version Name
           sed -i "s/versionName = \".*\"/versionName = \"$CLEAN_VERSION\"/g" build.gradle.kts
-
-          # 3. Inject the Integer Version Code
           sed -i "s/versionCode = [0-9]*/versionCode = $VERSION_CODE/g" build.gradle.kts
 
       - name: Make Gradle executable
@@ -211,7 +234,6 @@ jobs:
 
       - name: Prepare Assets for Release
         run: |
-          # Specifically tarball ONLY the raw executable, ignoring the .deb package
           cd artifacts/linux-amd64 && tar -czvf ../../lansync-linux-amd64.tar.gz LanSync && cd ../../
 
       - name: Create GitHub Release
