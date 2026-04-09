@@ -6,6 +6,10 @@ export function AcceptConnection(arg1) {
   return window['go']['main']['App']['AcceptConnection'](arg1);
 }
 
+export function CancelTransfers(arg1) {
+  return window['go']['main']['App']['CancelTransfers'](arg1);
+}
+
 export function Disconnect(arg1) {
   return window['go']['main']['App']['Disconnect'](arg1);
 }

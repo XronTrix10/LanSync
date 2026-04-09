@@ -3,6 +3,8 @@
 
 export function AcceptConnection(arg1:string):Promise<void>;
 
+export function CancelTransfers(arg1:string):Promise<void>;
+
 export function Disconnect(arg1:string):Promise<void>;
 
 export function DownloadFile(arg1:string,arg2:string,arg3:string):Promise<string>;

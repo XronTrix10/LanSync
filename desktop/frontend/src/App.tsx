@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AcceptConnection,
+  CancelTransfers,
   Disconnect,
   DownloadFile,
   DownloadFolder,
@@ -542,7 +543,14 @@ export default function App() {
             onShareClipboard={handleShareClipboard}
             onError={(msg) => showToast(msg, "error")}
           />
-          <TransferDrawer transfers={activeTransfers} />
+          <TransferDrawer
+            transfers={activeTransfers}
+            onCancelAll={() => {
+              if (activeDeviceIP) {
+                CancelTransfers(activeDeviceIP);
+              }
+            }}
+          />
         </div>
       </div>
 
