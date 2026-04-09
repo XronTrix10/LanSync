@@ -12,7 +12,7 @@ export function ConnectionRequestModal({ request, onAccept, onReject }: Props) {
 
   return (
     <div className="absolute inset-0 z-50 bg-bg-base/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-surface border border-border rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-200">
         <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mb-4 border border-accent/20">
           <ShieldAlert size={28} className="text-accent" />
         </div>
@@ -28,13 +28,13 @@ export function ConnectionRequestModal({ request, onAccept, onReject }: Props) {
         <div className="flex gap-3 w-full">
           <button
             onClick={onReject}
-            className="flex-1 px-4 py-2.5 text-sm font-semibold text-light hover:text-text transition-colors"
+            className="flex-1 px-4 py-2.5 bg-red/10 text-red rounded-lg text-[12px] font-medium hover:bg-red/20 transition-colors"
           >
             Reject
           </button>
           <button
             onClick={onAccept}
-            className="flex-1 px-4 py-2.5 bg-accent/10 border border-accent/30 text-accent rounded-lg text-[12px] font-medium hover:bg-accent/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 px-4 py-2.5 bg-accent/20 border border-accent/30 text-accent rounded-lg text-[12px] font-medium hover:bg-accent/30 transition-colors"
           >
             Accept
           </button>

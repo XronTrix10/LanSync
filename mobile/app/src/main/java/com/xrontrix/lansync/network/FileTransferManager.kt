@@ -87,7 +87,7 @@ class FileTransferManager(private val context: Context) {
         )
         return NotificationCompat.Action.Builder(
             android.R.drawable.ic_menu_close_clear_cancel,
-            "Cancel Transfer", 
+            "Cancel", 
             pendingIntent
         ).build()
     }
