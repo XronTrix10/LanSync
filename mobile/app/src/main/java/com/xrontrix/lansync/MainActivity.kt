@@ -50,7 +50,7 @@ class MainActivity : ComponentActivity(), BridgeCallback {
     private var isNetworkAvailable = mutableStateOf(false)
     private lateinit var connectivityManager: ConnectivityManager
     private lateinit var prefsManager: PreferencesManager
-    private lateinit var transferManager: FileTransferManager // ── Transfer Manager
+    private lateinit var transferManager: FileTransferManager
 
     private val activeDeviceIP = mutableStateOf<String?>(null)
     private val isConnecting = mutableStateOf(false)
@@ -102,16 +102,18 @@ class MainActivity : ComponentActivity(), BridgeCallback {
         try { Bridge.setDeviceName(savedName) } catch (e: Exception) {}
 
         val exposedUri = sharedPrefs.getString("exposed_folder", "") ?: ""
-        val realExposedPath = getRealPathFromURI(exposedUri)
-        try {
-            Bridge.updateExposedDir(realExposedPath)
-            Bridge.startMobileServer()
-        } catch (e: Exception) { e.printStackTrace() }
+        if (exposedUri == "ROOT") {
+            try { Bridge.updateExposedDir("ROOT") } catch (e: Exception) {}
+        } else if (exposedUri.isNotBlank()) {
+            try { Bridge.updateExposedDir(getRealPathFromURI(exposedUri)) } catch (e: Exception) {}
+        }
 
-        // ── Load Custom Download Folder into Go on app startup ──
         val savedDownloadUri = sharedPrefs.getString("download_folder", "") ?: ""
-        val realDownloadPath = getRealPathFromURI(savedDownloadUri)
-        try { Bridge.updateDownloadDir(realDownloadPath) } catch (e: Exception) {}
+        if (savedDownloadUri.isNotBlank()) {
+            try { Bridge.updateDownloadDir(getRealPathFromURI(savedDownloadUri)) } catch (e: Exception) {}
+        }
+
+        try { Bridge.startMobileServer() } catch (e: Exception) { e.printStackTrace() }
 
         setContent {
             LansyncTheme {
@@ -120,7 +122,7 @@ class MainActivity : ComponentActivity(), BridgeCallback {
                 val req = incomingRequest.value
                 if (req != null) {
                     Dialog(
-                        onDismissRequest = { /* Must explicitly click accept/reject */ },
+                        onDismissRequest = { },
                         properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = false, dismissOnClickOutside = false)
                     ) {
                         Box(
@@ -296,12 +298,11 @@ class MainActivity : ComponentActivity(), BridgeCallback {
                                 onCreateFolder = { folderName ->
                                     activeDeviceIP.value?.let { ip -> createRemoteFolder(ip, currentPath.value, folderName) }
                                 },
-                                // ── Transfer Manager Callbacks ──
                                 onUploadFiles = { uris ->
                                     activeDeviceIP.value?.let { ip ->
                                         isLoadingFiles.value = true
                                         transferManager.uploadFiles(ip, currentPath.value, uris) {
-                                            fetchRemoteFiles(ip, currentPath.value) // Auto-refresh on success!
+                                            fetchRemoteFiles(ip, currentPath.value)
                                         }
                                     }
                                 },
@@ -341,8 +342,6 @@ class MainActivity : ComponentActivity(), BridgeCallback {
                                 },
                                 onUpdateDownloadFolder = { downloadUri ->
                                     sharedPrefs.edit { putString("download_folder", downloadUri) }
-                                    
-                                    // ── Tell Go Backend the new path immediately ──
                                     try { Bridge.updateDownloadDir(getRealPathFromURI(downloadUri)) } catch (e: Exception) {}
 
                                     try {
@@ -357,12 +356,8 @@ class MainActivity : ComponentActivity(), BridgeCallback {
                                     sharedPrefs.edit { putString("exposed_folder", exposedUri) }
 
                                     if (exposedUri == "ROOT") {
-                                        // ── RAW FILE API BYPASS ──
-                                        // Pass "ROOT" directly to Go so it knows to use /storage/emulated/0
-                                        // We skip takePersistableUriPermission because MANAGE_EXTERNAL_STORAGE handles it!
                                         try { Bridge.updateExposedDir("ROOT") } catch (e: Exception) {}
                                     } else {
-                                        // ── STANDARD SAF PIPELINE ──
                                         try { Bridge.updateExposedDir(getRealPathFromURI(exposedUri)) } catch (e: Exception) {}
                                         try {
                                             contentResolver.takePersistableUriPermission(
@@ -371,7 +366,6 @@ class MainActivity : ComponentActivity(), BridgeCallback {
                                             )
                                         } catch (e: Exception) { e.printStackTrace() }
                                     }
-
                                     Toast.makeText(this@MainActivity, "Changed exposed folder", Toast.LENGTH_SHORT).show()
                                 }
                             )
@@ -413,7 +407,7 @@ class MainActivity : ComponentActivity(), BridgeCallback {
                 runOnUiThread {
                     isConnecting.value = false
                     if (connectedDeviceName.isNotEmpty()) {
-                        activeDeviceOS.value = os // Save it to state!
+                        activeDeviceOS.value = os
                         prefsManager.saveRecentDevice(ip, connectedDeviceName)
                         recentDevicesState.value = prefsManager.getRecentDevices()
                         toggleForegroundService(true)
@@ -539,7 +533,6 @@ class MainActivity : ComponentActivity(), BridgeCallback {
     }
 
     private fun getRealPathFromURI(uriString: String): String {
-        // ── If the special ROOT keyword is passed, give Go the absolute device path ──
         if (uriString == "ROOT") {
             return android.os.Environment.getExternalStorageDirectory().absolutePath
         }
