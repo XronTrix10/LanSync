@@ -34,6 +34,10 @@ var (
 	currentExposedDir string
 	dirMutex          sync.RWMutex
 
+	// ── Track Custom Download Directory ──
+	currentDownloadDir string
+	dlMutex            sync.RWMutex
+
 	pendingRequests = make(map[string]chan bool)
 	prMutex         sync.Mutex
 
@@ -78,12 +82,22 @@ func UpdateExposedDir(dir string) {
 	dirMutex.Unlock()
 }
 
-// ── Intercept ROOT and switch to the raw native File API ──
+// ── Receive Custom Download Path from Kotlin ──
+func UpdateDownloadDir(dir string) {
+	dlMutex.Lock()
+	currentDownloadDir = dir
+	dlMutex.Unlock()
+}
+
+// ── Correct Singular Download Directory ──
 func getExposedDir() string {
 	dirMutex.RLock()
 	defer dirMutex.RUnlock()
 	if currentExposedDir == "ROOT" {
 		return "/storage/emulated/0"
+	}
+	if currentExposedDir == "" {
+		return "/storage/emulated/0/Download/LANSync"
 	}
 	return currentExposedDir
 }
@@ -196,7 +210,6 @@ func StartMobileServer() {
 
 							if err != nil || resp.StatusCode != http.StatusOK {
 								sessionManager.RemoveSession(ip)
-
 								if cbProxy != nil && cbProxy.cb != nil {
 									cbProxy.cb.OnDeviceDropped(ip)
 								}
@@ -221,16 +234,14 @@ func StartMobileServer() {
 		})
 
 		mux.HandleFunc("/api/ping", authMiddleware(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }))
+
 		mux.HandleFunc("/api/disconnect", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 			clientIP, _, _ := net.SplitHostPort(r.RemoteAddr)
 			clientIP = strings.TrimPrefix(clientIP, "::ffff:")
-
 			sessionManager.RemoveSession(clientIP)
-
 			if cbProxy != nil && cbProxy.cb != nil {
 				cbProxy.cb.OnDeviceDropped(clientIP)
 			}
-
 			w.WriteHeader(http.StatusOK)
 		}))
 
@@ -281,19 +292,46 @@ func StartMobileServer() {
 			http.ServeFile(w, r, filepath.Join(getExposedDir(), requestedPath))
 		}))
 
+		// ── REAL-TIME STREAMING UPLOAD ──
 		mux.HandleFunc("/api/files/upload", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
-			r.ParseMultipartForm(10 << 20)
 			dir := r.URL.Query().Get("dir")
-			file, handler, err := r.FormFile("files")
-			if err != nil || strings.Contains(dir, "..") {
+			if strings.Contains(dir, "..") {
+				http.Error(w, "Invalid directory", http.StatusBadRequest)
 				return
 			}
-			defer file.Close()
+
+			// Bypasses the OS Cache and reads bytes directly from the network stream
+			reader, err := r.MultipartReader()
+			if err != nil {
+				http.Error(w, "Failed to read multipart stream", http.StatusBadRequest)
+				return
+			}
+
 			destDir := filepath.Join(getExposedDir(), dir)
 			os.MkdirAll(destDir, 0755)
-			dst, _ := os.Create(filepath.Join(destDir, handler.Filename))
-			defer dst.Close()
-			io.Copy(dst, file)
+
+			for {
+				part, err := reader.NextPart()
+				if err == io.EOF {
+					break
+				}
+				if err != nil {
+					continue
+				}
+
+				if part.FormName() == "files" {
+					filename := part.FileName()
+					if filename == "" {
+						continue
+					}
+
+					dst, err := os.Create(filepath.Join(destDir, filename))
+					if err == nil {
+						io.Copy(dst, part) // Streams raw bytes straight to the hard drive
+						dst.Close()
+					}
+				}
+			}
 			w.WriteHeader(http.StatusOK)
 		}))
 

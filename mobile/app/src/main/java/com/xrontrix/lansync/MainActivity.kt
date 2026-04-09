@@ -108,6 +108,11 @@ class MainActivity : ComponentActivity(), BridgeCallback {
             Bridge.startMobileServer()
         } catch (e: Exception) { e.printStackTrace() }
 
+        // ── Load Custom Download Folder into Go on app startup ──
+        val savedDownloadUri = sharedPrefs.getString("download_folder", "") ?: ""
+        val realDownloadPath = getRealPathFromURI(savedDownloadUri)
+        try { Bridge.updateDownloadDir(realDownloadPath) } catch (e: Exception) {}
+
         setContent {
             LansyncTheme {
                 val navController = rememberNavController()
@@ -336,6 +341,10 @@ class MainActivity : ComponentActivity(), BridgeCallback {
                                 },
                                 onUpdateDownloadFolder = { downloadUri ->
                                     sharedPrefs.edit { putString("download_folder", downloadUri) }
+                                    
+                                    // ── Tell Go Backend the new path immediately ──
+                                    try { Bridge.updateDownloadDir(getRealPathFromURI(downloadUri)) } catch (e: Exception) {}
+
                                     try {
                                         contentResolver.takePersistableUriPermission(
                                             downloadUri.toUri(),
@@ -534,7 +543,7 @@ class MainActivity : ComponentActivity(), BridgeCallback {
         if (uriString == "ROOT") {
             return android.os.Environment.getExternalStorageDirectory().absolutePath
         }
-        val defaultPath = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS).absolutePath + "/LanSync"
+        val defaultPath = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS).absolutePath + "/LANSync"
         if (uriString.isBlank()) return defaultPath
         return try {
             val decoded = java.net.URLDecoder.decode(uriString, "UTF-8")

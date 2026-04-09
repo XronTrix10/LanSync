@@ -58,7 +58,7 @@ fun SettingsScreen(
 
     fun formatUriDisplay(uri: String): String {
         if (uri == "ROOT") return "Entire Device Storage"
-        if (uri.isBlank()) return "Default (Downloads/LanSync)"
+        if (uri.isBlank()) return "Default (Download/LANSync)"
         return try {
             val decoded = java.net.URLDecoder.decode(uri, "UTF-8")
             if (decoded.contains("primary:")) {
