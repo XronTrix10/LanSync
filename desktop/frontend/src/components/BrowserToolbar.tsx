@@ -85,7 +85,7 @@ export function BrowserToolbar({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search locally..."
-            className="flex-1 bg-transparent border-none outline-none text-[13px] text-text placeholder-dull min-w-0"
+            className="flex-1 bg-transparent border-none outline-none text-text placeholder-dull min-w-0"
           />
           <button
             onClick={() => {
@@ -169,7 +169,7 @@ export function BrowserToolbar({
           onClick={onShareClipboard}
           disabled={disabled}
           title="Share Clipboard"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-purple bg-purple/8 border border-purple/25 hover:bg-purple/15 hover:border-purple/40 disabled:opacity-40 transition-all"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-purple bg-purple/8 border border-purple/25 hover:bg-purple/15 hover:border-purple/40 disabled:opacity-40 transition-all"
         >
           <ClipboardPaste size={12} /> Share
         </button>
@@ -180,7 +180,7 @@ export function BrowserToolbar({
             onClick={() => setIsSearchActive(true)}
             disabled={disabled}
             title="Search for files"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-gold bg-gold/8 border border-gold/25 hover:bg-gold/15 hover:border-gold/40 disabled:opacity-40 transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-gold bg-gold/8 border border-gold/25 hover:bg-gold/15 hover:border-gold/40 disabled:opacity-40 transition-all"
           >
             <Search size={12} /> Search
           </button>

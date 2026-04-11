@@ -175,10 +175,7 @@ const IPInput = ({ value, onChange, onEnter, disabled }: Props) => {
                     : "1"
             }
             maxLength={3}
-            className="
-              w-7 text-center bg-transparent outline-none
-              text-[12px] font-mono text-text placeholder-dull
-            "
+            className="w-7 text-center bg-transparent outline-none font-mono text-text placeholder-dull"
           />
           {i < 3 && (
             <span className="text-dull mx-1 font-bold leading-none select-none">

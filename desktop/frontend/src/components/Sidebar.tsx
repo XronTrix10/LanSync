@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { Device, DiscoveredDevice } from "../types";
 import IPInput from "./IPInput";
+import { useState } from "react";
 
 interface Props {
   localDeviceName: string;
@@ -33,12 +34,40 @@ interface Props {
 }
 
 // ── Icons ───────────────────────────────────────────────────────────────────
-function DeviceIcon({ os, size = 16 }: { os: string; size?: number }) {
+const DeviceIcon = ({ os, size = 16 }: { os: string; size?: number }) => {
   const lower = os?.toLowerCase();
   if (lower === "android") return <Smartphone size={size} />;
   if (lower === "windows" || lower === "darwin" || lower === "linux")
     return <Monitor size={size} />;
   return <Server size={size} />;
+}
+
+const RefreshButton = ({ onRefresh }: { onRefresh?: () => void }) => {
+  const [isSpinning, setIsSpinning] = useState(false);
+  const handleRefreshClick = () => {
+    if (isSpinning) return;
+    setIsSpinning(true);
+    if (onRefresh) {
+      onRefresh();
+    }
+    setTimeout(() => {
+      setIsSpinning(false);
+    }, 1000);
+  };
+
+  return (
+    <button
+      onClick={handleRefreshClick}
+      title="Refresh Network"
+      className={`text-text transition-colors duration-200 ${isSpinning ? 'opacity-50 cursor-not-allowed' : ''}`}
+      disabled={isSpinning}
+    >
+      <RefreshCw
+        size={12}
+        className={`${isSpinning ? 'animate-spin' : ''}`}
+      />
+    </button>
+  );
 }
 
 // ── Sidebar Component ───────────────────────────────────────────────────────
@@ -80,7 +109,7 @@ export function Sidebar({
       <div className="px-5 pt-5 pb-4 rounded-xl bg-surface">
         <div className="flex justify-between items-center mb-3">
           <div
-            className="text-[14px] font-black tracking-widest select-none truncate text-text"
+            className="text-sm font-black tracking-widest select-none truncate text-text"
             title={localDeviceName || "My Device"}
           >
             {localDeviceName || "My Device"}
@@ -101,13 +130,7 @@ export function Sidebar({
             <WifiOff size={20} className="text-red mb-1.5" />
             <div className="flex items-center gap-2">
               <p className="text-[11px] font-bold text-text">No Network</p>
-              <button
-                onClick={onRefresh}
-                title="Refresh Network"
-                className="text-text transition-colors duration-200"
-              >
-                <RefreshCw size={12} />
-              </button>
+              <RefreshButton onRefresh={onRefresh} />
             </div>
             <p className="text-[9px] text-light mt-0.5">Please connect to a network</p>
           </div>
@@ -131,13 +154,7 @@ export function Sidebar({
                 </div>
               ))}
             </div>
-            <button
-              onClick={onRefresh}
-              title="Refresh Network"
-              className="text-light hover:text-text transition-colors duration-200"
-            >
-              <RefreshCw size={15} />
-            </button>
+            <RefreshButton onRefresh={onRefresh} />
           </div>
         )}
       </div>
@@ -185,7 +202,7 @@ export function Sidebar({
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <p
-                      className={`text-[12px] font-semibold truncate leading-tight ${isActive ? "text-text" : "text-light group-hover:text-text"}`}
+                      className={`text-[11px] font-semibold truncate leading-tight mb-0.5 ${isActive ? "text-text" : "text-light group-hover:text-text"}`}
                     >
                       {device.deviceName}
                     </p>
@@ -241,7 +258,7 @@ export function Sidebar({
                 </span>
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-semibold text-text truncate group-hover:text-accent transition-colors duration-200">
+                  <p className="text-[11px] font-semibold text-text truncate group-hover:text-accent transition-colors duration-200 mb-0.5">
                     {device.deviceName}
                   </p>
                   <p className="text-[10px] font-mono text-dull truncate">
@@ -276,8 +293,7 @@ export function Sidebar({
             onClick={() => onConnect(newDeviceIP)}
             disabled={loading || !isIPComplete || localIPs.length === 0}
             className="
-              flex items-center justify-center gap-2 w-full py-2
-              text-[12px] font-semibold rounded-lg transition-all
+              flex items-center justify-center gap-2 w-full py-2 font-semibold rounded-lg transition-all
               bg-accent/10 border border-accent/30 text-accent
               hover:bg-accent/18 hover:border-accent/50
               disabled:opacity-40 disabled:cursor-not-allowed

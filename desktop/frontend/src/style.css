@@ -5,14 +5,11 @@
   --color-bg-base:  #070707;
   --color-surface:  #131313;
   --color-panel:    #1D1D1D;
-  --color-card:     #1b1826;
   --color-border:   #2c2e41;
   --color-border2:  #2e2a3f;
  
   /* Accent — orange family */
   --color-accent:       #f58e2f;   /* primary orange */
-  --color-accent-warm:  #e8832a;   /* hover / lighter orange */
-  --color-amber:        #f0a44a;   /* secondary warm, folder upload, code */
  
   /* Semantic colours */
   --color-gold:    #FFDF00;   /* success / online / transfer */
@@ -22,7 +19,6 @@
   /* Text hierarchy */
   --color-text:     #FCF6F3;   /* slightly warmer white */
   --color-muted:    #8a8099;
-  --color-dim:      #42395a;
   --color-dull:     #6e6e6e;
   --color-light:    #ffd2bf;
 }
@@ -41,6 +37,14 @@ body {
     "Helvetica Neue", Arial, sans-serif;
   font-size: 14px;
   line-height: 1.5;
+}
+
+input {
+  font-size: 13px;
+}
+
+button {
+  font-size: 12px;
 }
 
 /* ── Scrollbars ────────────────────────────────────────────────────────────── */

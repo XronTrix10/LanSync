@@ -28,13 +28,13 @@ export function ConnectionRequestModal({ request, onAccept, onReject }: Props) {
         <div className="flex gap-3 w-full">
           <button
             onClick={onReject}
-            className="flex-1 px-4 py-2.5 bg-red/10 text-red rounded-lg text-[12px] font-medium hover:bg-red/20 transition-colors"
+            className="flex-1 px-4 py-2.5 bg-red/10 text-red rounded-lg font-medium hover:bg-red/20 transition-colors"
           >
             Reject
           </button>
           <button
             onClick={onAccept}
-            className="flex-1 px-4 py-2.5 bg-accent/20 border border-accent/30 text-accent rounded-lg text-[12px] font-medium hover:bg-accent/30 transition-colors"
+            className="flex-1 px-4 py-2.5 bg-accent/20 border border-accent/30 text-accent rounded-lg font-medium hover:bg-accent/30 transition-colors"
           >
             Accept
           </button>

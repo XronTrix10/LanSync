@@ -45,7 +45,7 @@ export function SettingsModal({
   return (
     <div className="absolute inset-0 z-100 bg-bg-base/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-surface border border-border rounded-2xl w-full max-w-sm shadow-2xl p-5 animate-in fade-in zoom-in-95 duration-150">
-        <h3 className="text-[14px] font-semibold text-text mb-1">
+        <h3 className="text-sm font-semibold text-text mb-1">
           Settings
         </h3>
         <p className="text-[11px] text-dull mb-5">
@@ -61,7 +61,7 @@ export function SettingsModal({
             type="text"
             value={deviceName}
             onChange={(e) => setDeviceName(e.target.value)}
-            className="w-full px-3 py-2 bg-bg-base border border-border rounded-lg text-[13px] text-text placeholder-dull outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all"
+            className="w-full px-3 py-2 bg-bg-base border border-border rounded-lg text-text placeholder-dull outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all"
             placeholder="e.g. MacBook Pro"
           />
         </div>
@@ -73,7 +73,7 @@ export function SettingsModal({
           </label>
           <div className="flex gap-2">
             <div
-              className="flex-1 px-3 py-2 bg-bg-base border border-border rounded-lg text-[13px] text-text truncate flex items-center"
+              className="flex-1 px-3 py-2 bg-bg-base border border-border rounded-lg text-sm text-text truncate flex items-center"
               title={sharedDir}
             >
               {displayPath(sharedDir) || "~/"}
@@ -83,7 +83,7 @@ export function SettingsModal({
                 const selectedPath = await SelectDirectory();
                 if (selectedPath) setSharedDir(selectedPath);
               }}
-              className="px-3 py-2 bg-border border border-border hover:border-border2 text-text rounded-lg text-[12px] font-medium hover:bg-border2 transition-colors whitespace-nowrap"
+              className="px-3 py-2 bg-border border border-border hover:border-border2 text-text rounded-lg font-medium hover:bg-border2 transition-colors whitespace-nowrap"
             >
               Browse
             </button>
@@ -94,14 +94,14 @@ export function SettingsModal({
         <div className="flex justify-end gap-2 mt-2">
           <button
             onClick={handleCancel}
-            className="px-4 py-1.5 text-[12px] font-medium text-light hover:text-text transition-colors"
+            className="px-4 py-1.5 font-medium text-light hover:text-text transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={onSave}
             disabled={!deviceName.trim() || !sharedDir.trim()}
-            className="px-4 py-1.5 bg-accent/10 border border-accent/30 text-accent rounded-lg text-[12px] font-medium hover:bg-accent/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+            className="px-4 py-1.5 bg-accent/10 border border-accent/30 text-accent rounded-lg font-medium hover:bg-accent/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
           >
             Save
           </button>

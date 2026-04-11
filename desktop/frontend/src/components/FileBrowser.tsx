@@ -174,7 +174,7 @@ export function FileBrowser({
           <p className="text-[15px] font-semibold text-light">
             No device selected
           </p>
-          <p className="text-[12px] text-dull mt-1">
+          <p className="text-[11px] text-dull mt-1">
             Connect a device from the sidebar to browse files
           </p>
         </div>
@@ -256,7 +256,7 @@ export function FileBrowser({
         {loading && files.length === 0 && (
           <div className="flex items-center justify-center gap-2 py-16 text-dull">
             <Loader2 size={16} className="animate-spin" />
-            <span className="text-[12px]">Loading…</span>
+            <span className="text-sm">Loading…</span>
           </div>
         )}
 
@@ -264,7 +264,7 @@ export function FileBrowser({
         {!loading && files.length === 0 && !isSearchActive && (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-dull">
             <span className="text-4xl mb-1">📭</span>
-            <p className="text-[13px] text-light font-medium">
+            <p className="text-[15px] text-light font-medium">
               This folder is empty
             </p>
             <p className="text-[11px] text-dull">
@@ -280,7 +280,7 @@ export function FileBrowser({
           isSearchActive && (
             <div className="flex flex-col items-center justify-center h-full gap-4 text-dull">
               <Search size={32} className="text-dull mb-1 opacity-50" />
-              <p className="text-[13px] text-light font-medium">
+              <p className="text-[15px] text-light font-medium">
                 No matching files found
               </p>
             </div>
@@ -309,7 +309,7 @@ export function FileBrowser({
                 setShowFabMenu(false);
                 onUploadFiles();
               }}
-              className="w-fit rounded-xl border border-purple/30 flex items-center gap-2.5 px-3 py-2.5 text-[12px] font-medium bg-purple/10 text-purple transition-colors backdrop-blur-md hover:text-text hover:bg-purple/80"
+              className="w-fit rounded-xl border border-purple/30 flex items-center gap-2.5 px-3 py-2.5 font-medium bg-purple/10 text-purple transition-colors backdrop-blur-md hover:text-text hover:bg-purple/80"
             >
               <Upload size={14} /> Upload Files
             </button>
@@ -318,7 +318,7 @@ export function FileBrowser({
                 setShowFabMenu(false);
                 onUploadFolder();
               }}
-              className="w-fit rounded-xl border border-gold/30 flex items-center gap-2.5 px-3 py-2.5 text-[12px] font-medium bg-gold/10 text-gold transition-colors backdrop-blur-md hover:text-text hover:bg-gold/80"
+              className="w-fit rounded-xl border border-gold/30 flex items-center gap-2.5 px-3 py-2.5 font-medium bg-gold/10 text-gold transition-colors backdrop-blur-md hover:text-text hover:bg-gold/80"
             >
               <FolderUp size={14} /> Upload Folder
             </button>
@@ -327,7 +327,7 @@ export function FileBrowser({
                 setShowFabMenu(false);
                 setShowCreateModal(true);
               }}
-              className="w-fit rounded-xl flex items-center border border-accent/30 gap-2.5 px-3 py-2.5 text-[12px] font-medium bg-accent/10 text-accent transition-colors backdrop-blur-md hover:text-text hover:bg-accent/90"
+              className="w-fit rounded-xl flex items-center border border-accent/30 gap-2.5 px-3 py-2.5 font-medium bg-accent/10 text-accent transition-colors backdrop-blur-md hover:text-text hover:bg-accent/90"
             >
               <FolderPlus size={14} /> Create Folder
             </button>
