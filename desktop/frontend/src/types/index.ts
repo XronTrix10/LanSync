@@ -25,19 +25,19 @@ export interface Toast {
   path?: string;
 }
 
-export interface Device {
+export interface DiscoveredDevice {
   ip: string;
   deviceName: string;
   os: string;
+}
+
+export interface Device extends DiscoveredDevice {
+  port: string;
   type: string;
 }
 
-// NEW: Handshake Request Payload
-export interface ConnectionRequest {
-  ip: string;
-  deviceName: string;
-  os: string;
-  type: string;
+// Handshake Request Payload
+export interface ConnectionRequest extends Device {
   tokenForB: string;
 }
 
@@ -75,21 +75,4 @@ export function getOSLabel(os: string): string {
 
 export function getFileExtension(name: string): string {
   return name.split(".").pop()?.toLowerCase() ?? "";
-}
-
-export interface Device {
-  ip: string;
-  port: string;
-  deviceName: string;
-  os: string;
-  type: string;
-}
-
-export interface ConnectionRequest {
-  ip: string;
-  port: string;
-  deviceName: string;
-  os: string;
-  type: string;
-  tokenForB: string;
 }

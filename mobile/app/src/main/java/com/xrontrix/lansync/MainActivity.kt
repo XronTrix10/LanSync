@@ -45,6 +45,12 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
+data class DiscoveredDevice(
+    val ip: String,
+    val deviceName: String,
+    val os: String
+)
+
 class MainActivity : ComponentActivity(), BridgeCallback {
 
     private var isNetworkAvailable = mutableStateOf(false)
@@ -63,6 +69,7 @@ class MainActivity : ComponentActivity(), BridgeCallback {
     private var parentPath = mutableStateOf("")
     private var remoteFiles = mutableStateOf<List<com.xrontrix.lansync.ui.screens.FileInfo>>(emptyList())
     private var isLoadingFiles = mutableStateOf(false)
+    private val discoveredDevices = mutableStateOf<List<DiscoveredDevice>>(emptyList())
 
     private fun toggleForegroundService(start: Boolean) {
         val serviceIntent = Intent(this, LanSyncService::class.java)
@@ -269,6 +276,7 @@ class MainActivity : ComponentActivity(), BridgeCallback {
                                 activeDeviceIP = activeDeviceIP.value,
                                 activeDeviceOS = activeDeviceOS.value,
                                 recentDevices = recentDevicesState.value,
+                                discoveredDevices = discoveredDevices.value,
                                 isConnecting = isConnecting.value,
                                 onConnect = { ip, onSuccess ->
                                     connectToDevice(ip) { success ->
@@ -309,7 +317,7 @@ class MainActivity : ComponentActivity(), BridgeCallback {
                                 files = remoteFiles.value,
                                 isLoading = isLoadingFiles.value,
                                 onNavigate = { newPath -> activeDeviceIP.value?.let { ip -> fetchRemoteFiles(ip, newPath) } },
-                                onShareClipboardClick = { activeDeviceIP.value?.let { ip -> shareMobileTextWithDesktop(ip, "34931") } },
+                                onShareClipboardClick = { activeDeviceIP.value?.let { ip -> shareMobileTextWithDesktop(ip) } },
                                 onCreateFolder = { folderName ->
                                     activeDeviceIP.value?.let { ip -> createRemoteFolder(ip, currentPath.value, folderName) }
                                 },
@@ -501,7 +509,7 @@ class MainActivity : ComponentActivity(), BridgeCallback {
         }.start()
     }
 
-    private fun shareMobileTextWithDesktop(targetIP: String, port: String) {
+    private fun shareMobileTextWithDesktop(targetIP: String) {
         val clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
         if (!clipboardManager.hasPrimaryClip() || clipboardManager.primaryClip?.getItemAt(0)?.text == null) {
             runOnUiThread { Toast.makeText(this, "Mobile clipboard is empty", Toast.LENGTH_SHORT).show() }
@@ -510,7 +518,7 @@ class MainActivity : ComponentActivity(), BridgeCallback {
         val text = clipboardManager.primaryClip!!.getItemAt(0).text.toString()
         Thread {
             try {
-                Bridge.shareMobileClipboard(targetIP, port, text.toByteArray(Charsets.UTF_8), "text/plain")
+                Bridge.shareMobileClipboard(targetIP, "34931", text.toByteArray(Charsets.UTF_8), "text/plain")
                 runOnUiThread { Toast.makeText(this@MainActivity, "Sent to Device!", Toast.LENGTH_SHORT).show() }
             } catch (e: Exception) {
                 runOnUiThread { Toast.makeText(this@MainActivity, "Share failed: ${e.message}", Toast.LENGTH_LONG).show() }
@@ -597,6 +605,33 @@ class MainActivity : ComponentActivity(), BridgeCallback {
             }
             Toast.makeText(this, "Device disconnected: $ip", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    override fun onDevicesDiscovered(jsonString: String?) {
+        if (jsonString == null) return
+        Thread {
+            try {
+                val jsonArray = JSONArray(jsonString)
+                val devs = mutableListOf<DiscoveredDevice>()
+                for (i in 0 until jsonArray.length()) {
+                    val obj = jsonArray.getJSONObject(i)
+                    devs.add(
+                        DiscoveredDevice(
+                            ip = obj.getString("ip"),
+                            deviceName = obj.getString("deviceName"),
+                            os = obj.getString("os")
+                        )
+                    )
+                }
+                // Filter out self using IP!
+                val myIPs = getLocalIPAddress()
+                val filteredDevs = devs.filter { it.ip != myIPs }
+                
+                runOnUiThread {
+                    discoveredDevices.value = filteredDevs
+                }
+            } catch (e: Exception) { e.printStackTrace() }
+        }.start()
     }
 
     override fun onDestroy() {

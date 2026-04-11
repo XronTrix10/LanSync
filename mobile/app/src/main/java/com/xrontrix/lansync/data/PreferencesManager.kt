@@ -10,16 +10,14 @@ class PreferencesManager(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("lansync_prefs", Context.MODE_PRIVATE)
 
     fun saveRecentDevice(ip: String, name: String) {
-        // Keep a history of the last 5 connected IPs
-        val currentIPs = getRecentDevices().map { it.ip }.toMutableList()
-        currentIPs.remove(ip) // Remove if exists to move it to the top
-        currentIPs.add(0, ip)
-
-        val trimmedIPs = currentIPs.take(5)
+        val currentDevices = getRecentDevices().toMutableList()
+        currentDevices.removeAll { it.ip == ip || it.name == name }
+        currentDevices.add(0, RecentDevice(ip, name))
+        val trimmedDevices = currentDevices.take(5)
 
         prefs.edit().apply {
-            putString("recent_ips", trimmedIPs.joinToString(","))
-            putString("device_name_$ip", name)
+            putString("recent_ips", trimmedDevices.joinToString(",") { it.ip })
+            trimmedDevices.forEach { putString("device_name_${it.ip}", it.name) }
             apply()
         }
     }
@@ -28,7 +26,7 @@ class PreferencesManager(context: Context) {
         val ipString = prefs.getString("recent_ips", "") ?: ""
         if (ipString.isBlank()) return emptyList()
 
-        return ipString.split(",").mapNotNull { ip ->
+        return ipString.split(",").map { ip ->
             val name = prefs.getString("device_name_$ip", "Unknown Device") ?: "Unknown Device"
             RecentDevice(ip, name)
         }

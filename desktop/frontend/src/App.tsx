@@ -38,6 +38,7 @@ import type {
   FileInfo,
   Toast,
   TransferProgress,
+  DiscoveredDevice,
 } from "./types";
 
 export default function App() {
@@ -49,6 +50,7 @@ export default function App() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [activeDeviceIP, setActiveDeviceIP] = useState<string | null>(null);
   const [newDeviceIP, setNewDeviceIP] = useState<string>("");
+  const [discoveredDevices, setDiscoveredDevices] = useState<DiscoveredDevice[]>([]);
   const [sharedDir, setSharedDir] = useState("");
   const [homeDir, setHomeDir] = useState("");
   const [pendingRequest, setPendingRequest] =
@@ -157,6 +159,10 @@ export default function App() {
     EventsOn("upload_start", () => setUploading(true));
     EventsOn("upload_complete", () => setUploading(false));
 
+    EventsOn("devices_discovered", (devs: DiscoveredDevice[]) => {
+      setDiscoveredDevices(devs || []);
+    });
+
     EventsOn("connection_requested", (req: ConnectionRequest) => {
       setPendingRequest(req);
       sendOSNotification(
@@ -220,6 +226,7 @@ export default function App() {
       EventsOff("transfer_complete");
       EventsOff("upload_start");
       EventsOff("upload_complete");
+      EventsOff("devices_discovered");
       EventsOff("connection_requested");
       EventsOff("connection_lost");
       EventsOff("wails:file-drop");
@@ -239,7 +246,7 @@ export default function App() {
   // ── Helpers ───────────────────────────────────────────────────────────────
   const addRecentDevice = (device: Device) => {
     setRecentDevices((prev) => {
-      const filtered = prev.filter((d) => d.ip !== device.ip);
+      const filtered = prev.filter((d) => d.ip !== device.ip && d.deviceName !== device.deviceName);
       const updated = [device, ...filtered].slice(0, 5);
       localStorage.setItem("lansync_recent_devices", JSON.stringify(updated));
       return updated;
@@ -535,6 +542,7 @@ export default function App() {
           devices={devices}
           activeDeviceIP={activeDeviceIP}
           recentDevices={recentDevices}
+          discoveredDevices={discoveredDevices}
           newDeviceIP={newDeviceIP}
           loading={loading}
           onSetActiveDevice={setActiveDeviceIP}

@@ -21,6 +21,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -47,6 +48,7 @@ fun HomeScreen(
     activeDeviceIP: String?,
     activeDeviceOS: String,
     recentDevices: List<RecentDevice>,
+    discoveredDevices: List<com.xrontrix.lansync.DiscoveredDevice>,
     isConnecting: Boolean,
     onConnect: (String, (Boolean) -> Unit) -> Unit,
     onDisconnect: () -> Unit,
@@ -137,6 +139,57 @@ fun HomeScreen(
                 }
             }
         } else {
+            // ── AVAILABLE DEVICES ──
+            val availableToConnect = discoveredDevices.filter { d -> 
+                val connectedName = activeDeviceIP?.let { ip -> recentDevices.find { it.ip == ip }?.name } ?: "Connected Device"
+                d.ip != activeDeviceIP && d.deviceName != connectedName
+            }
+            Text("AVAILABLE DEVICES", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp, modifier = Modifier.align(Alignment.Start).padding(start = 4.dp, bottom = 8.dp))
+            
+            if (availableToConnect.isEmpty()) {
+                val infiniteTransitionLoader = rememberInfiniteTransition(label = "loader")
+                val rotation by infiniteTransitionLoader.animateFloat(
+                    initialValue = 0f, targetValue = 360f,
+                    animationSpec = infiniteRepeatable(animation = tween(1000, easing = LinearEasing), repeatMode = RepeatMode.Restart),
+                    label = "rotation"
+                )
+                Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp, start = 4.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painter = painterResource(R.drawable.refresh), 
+                        contentDescription = "Looking", 
+                        tint = Accent, 
+                        modifier = Modifier.size(16.dp).graphicsLayer { rotationZ = rotation }.alpha(0.8f)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Looking for devices...", color = TextMuted, fontSize = 13.sp)
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+                    availableToConnect.forEach { device ->
+                        Surface(
+                            color = Panel, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Surface),
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                onConnect(device.ip) { success -> if (success) ipSegments = listOf("", "", "", "") }
+                            }
+                        ) {
+                            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                DeviceIcon(device.os, Accent, Modifier.size(24.dp))
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(device.deviceName, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                    Text(device.ip, color = TextMuted.copy(alpha = 0.7f), fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(top = 2.dp))
+                                }
+                                IconButton(onClick = { onConnect(device.ip) { success -> if (success) ipSegments = listOf("", "", "", "") } }, modifier = Modifier.size(32.dp)) {
+                                    Icon(painter = painterResource(R.drawable.connect), contentDescription = "Connect", tint = Accent, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Text("MANUAL CONNECT", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp, modifier = Modifier.align(Alignment.Start).padding(start = 4.dp, bottom = 8.dp))
+
             // ── Track focus state of all 4 inputs ──
             val focusStates = remember { mutableStateListOf(false, false, false, false) }
             val isAnyFocused = focusStates.any { it }
@@ -291,7 +344,10 @@ fun HomeScreen(
                 }
             }
 
-            val filteredRecent = recentDevices.filter { it.ip != activeDeviceIP }
+            val filteredRecent = recentDevices.filter { d -> 
+                val connectedName = activeDeviceIP?.let { ip -> recentDevices.find { it.ip == ip }?.name } ?: "Connected Device"
+                d.ip != activeDeviceIP && d.name != connectedName 
+            }
             if (filteredRecent.isNotEmpty()) {
                 Text("RECENT DEVICES", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 16.dp)) {

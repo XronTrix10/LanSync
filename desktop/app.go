@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	stdruntime "runtime"
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -14,6 +15,7 @@ import (
 	"lansync/internal/client"
 	"lansync/internal/clipboard"
 	"lansync/internal/config"
+	"lansync/internal/discovery"
 	"lansync/internal/server"
 	"lansync/internal/sys"
 )
@@ -41,6 +43,14 @@ func (a *App) startup(ctx context.Context) {
 	a.desktopServer.SetContext(ctx)
 
 	go a.desktopServer.Start("34931")
+
+	discovery.Start(
+		func() string { return config.Load().DeviceName },
+		stdruntime.GOOS,
+		func(devices []discovery.DiscoveredDevice) {
+			runtime.EventsEmit(a.ctx, "devices_discovered", devices)
+		},
+	)
 }
 
 // ── THE KILL SWITCH TRIGGER (Called from React UI) ──

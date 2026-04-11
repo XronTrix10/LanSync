@@ -11,8 +11,8 @@ import {
   WifiOff,
   X,
 } from "lucide-react";
-import type { Device } from "../types";
 import IPInput from "./IPInput";
+import type { Device, DiscoveredDevice } from "../types";
 
 interface Props {
   localDeviceName: string;
@@ -20,6 +20,7 @@ interface Props {
   devices: Device[];
   activeDeviceIP: string | null;
   recentDevices: Device[];
+  discoveredDevices: DiscoveredDevice[];
   newDeviceIP: string;
   loading: boolean;
   onSetActiveDevice: (ip: string) => void;
@@ -47,6 +48,7 @@ export function Sidebar({
   devices,
   activeDeviceIP,
   recentDevices,
+  discoveredDevices,
   newDeviceIP,
   loading,
   onSetActiveDevice,
@@ -63,7 +65,13 @@ export function Sidebar({
 
   // Filter out currently connected devices from the recent list
   const unconnectedRecent = recentDevices.filter(
-    (recent) => !devices.some((connected) => connected.ip === recent.ip),
+    (rd) => !devices.some((d) => d.ip === rd.ip || d.deviceName === rd.deviceName),
+  );
+
+  const availableToConnect = (discoveredDevices || []).filter(
+    (d) =>
+      !localIPs.includes(d.ip) &&
+      !devices.some((con) => con.ip === d.ip || con.deviceName === d.deviceName)
   );
 
   return (
@@ -193,10 +201,56 @@ export function Sidebar({
         )}
       </div>
 
-      {/* ── Add Device ── */}
+      {/* ── Available Devices ── */}
+      <div className="px-3 pb-3 rounded-xl bg-surface pt-3 flex flex-col gap-2">
+        <p className="text-[9px] font-bold tracking-[0.15em] uppercase text-dull px-2 mb-1">
+          Available Devices
+        </p>
+        
+        {availableToConnect.length === 0 ? (
+          <div className="flex items-center gap-2 px-3 py-2 text-dull">
+            <Loader2 size={13} className="animate-spin text-accent" />
+            <span className="text-[11px] font-medium">Looking for devices...</span>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {availableToConnect.map((device) => (
+              <div
+                key={device.ip}
+                onClick={() => localIPs.length > 0 && onConnect(device.ip)}
+                title={localIPs.length > 0 ? "Connect" : "Can't connect"}
+                className={`
+                  group flex items-center gap-2.5 px-3 py-2 rounded-lg
+                  transition-all text-left w-full border hover:border-border border-transparent
+                  ${localIPs.length > 0 ? "cursor-pointer bg-transparent hover:bg-panel" : "opacity-50 cursor-not-allowed"}
+                `}
+              >
+                <span className="text-dull group-hover:text-light transition-colors duration-200">
+                  <DeviceIcon os={device.os} size={16} />
+                </span>
+
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12px] font-semibold text-text truncate group-hover:text-gold transition-colors duration-200">
+                    {device.deviceName}
+                  </p>
+                  <p className="text-[10px] font-mono text-light truncate">
+                    {device.ip}
+                  </p>
+                </div>
+
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gold/10 p-1 rounded-md">
+                  <Plus size={14} className="text-gold" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Manual Device Address ── */}
       <div className="px-3 pb-3 rounded-xl bg-surface pt-3 flex flex-col gap-3">
         <p className="text-[9px] font-bold tracking-[0.15em] uppercase text-dull px-2">
-          Add Device
+          Manual Connect
         </p>
 
         {/* IP Input */}

@@ -16,6 +16,7 @@ import (
 	"lansync/internal/auth"
 	"lansync/internal/client"
 	"lansync/internal/clipboard"
+	"lansync/internal/discovery"
 	"lansync/internal/models"
 	"lansync/internal/server"
 
@@ -88,6 +89,7 @@ type BridgeCallback interface {
 	OnDeviceDropped(ip string)
 	OnClipboardDataReceived(data []byte, contentType string)
 	OnConnectionRequested(ip string, deviceName string)
+	OnDevicesDiscovered(jsonString string)
 }
 
 type androidBridgeProxy struct{ cb BridgeCallback }
@@ -112,6 +114,17 @@ func StartupWithCallback(cb BridgeCallback) {
 	desktopServer.SetContext(ctx)
 
 	go desktopServer.Start("34932")
+
+	discovery.Start(
+		func() string { return mobileDeviceName },
+		"android",
+		func(devices []discovery.DiscoveredDevice) {
+			jsonBytes, _ := json.Marshal(devices)
+			if cbProxy != nil && cbProxy.cb != nil {
+				cbProxy.cb.OnDevicesDiscovered(string(jsonBytes))
+			}
+		},
+	)
 }
 
 func SetDeviceName(name string) { mobileDeviceName = name }
