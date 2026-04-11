@@ -48,6 +48,7 @@ import java.net.URL
 class MainActivity : ComponentActivity(), BridgeCallback {
 
     private var isNetworkAvailable = mutableStateOf(false)
+    private var currentLocalIP = mutableStateOf<String?>(null)
     private lateinit var connectivityManager: ConnectivityManager
     private lateinit var prefsManager: PreferencesManager
     private lateinit var transferManager: FileTransferManager
@@ -73,15 +74,24 @@ class MainActivity : ComponentActivity(), BridgeCallback {
     }
 
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
-        override fun onAvailable(network: Network) { isNetworkAvailable.value = getLocalIPAddress() != null }
-        override fun onLost(network: Network) { isNetworkAvailable.value = getLocalIPAddress() != null }
+        override fun onAvailable(network: Network) { 
+            val ip = getLocalIPAddress()
+            currentLocalIP.value = ip
+            isNetworkAvailable.value = ip != null
+        }
+        override fun onLost(network: Network) { 
+            val ip = getLocalIPAddress()
+            currentLocalIP.value = ip
+            isNetworkAvailable.value = ip != null
+        }
     }
 
     private fun setupNetworkMonitoring() {
         connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val request = NetworkRequest.Builder().build()
         connectivityManager.registerNetworkCallback(request, networkCallback)
-        isNetworkAvailable.value = getLocalIPAddress() != null
+        currentLocalIP.value = getLocalIPAddress()
+        isNetworkAvailable.value = currentLocalIP.value != null
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -255,7 +265,7 @@ class MainActivity : ComponentActivity(), BridgeCallback {
                             HomeScreen(
                                 deviceName = savedName,
                                 isNetworkAvailable = isNetworkAvailable.value,
-                                localIP = getLocalIPAddress() ?: "127.0.0.1",
+                                localIP = currentLocalIP.value ?: "127.0.0.1",
                                 activeDeviceIP = activeDeviceIP.value,
                                 activeDeviceOS = activeDeviceOS.value,
                                 recentDevices = recentDevicesState.value,
@@ -274,6 +284,12 @@ class MainActivity : ComponentActivity(), BridgeCallback {
                                     prefsManager.removeDevice(ipToRemove)
                                     recentDevicesState.value = prefsManager.getRecentDevices()
                                     Toast.makeText(this@MainActivity, "Device removed", Toast.LENGTH_SHORT).show()
+                                },
+                                onRefreshNetwork = {
+                                    val ip = getLocalIPAddress()
+                                    currentLocalIP.value = ip
+                                    isNetworkAvailable.value = ip != null
+                                    Toast.makeText(this@MainActivity, "Network refreshed", Toast.LENGTH_SHORT).show()
                                 }
                             )
                         }

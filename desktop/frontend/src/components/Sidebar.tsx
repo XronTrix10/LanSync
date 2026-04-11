@@ -3,6 +3,7 @@ import {
   Loader2,
   Monitor,
   Plus,
+  RefreshCw,
   Server,
   Settings,
   Smartphone,
@@ -27,6 +28,7 @@ interface Props {
   onConnect: (ip?: string) => void;
   onRemoveRecent: (ip: string) => void;
   setShowSettings: (show: boolean) => void;
+  onRefresh: () => void;
 }
 
 // ── Icons ───────────────────────────────────────────────────────────────────
@@ -53,6 +55,7 @@ export function Sidebar({
   onConnect,
   onRemoveRecent,
   setShowSettings,
+  onRefresh,
 }: Props) {
   // A valid IP means all 4 boxes have at least one digit in them
   const isIPComplete =
@@ -74,13 +77,22 @@ export function Sidebar({
           >
             {localDeviceName || "My Device"}
           </div>
-          <button
-            onClick={() => setShowSettings(true)}
-            title="Settings"
-            className="text-light hover:text-text transition-colors duration-200"
-          >
-            <Settings size={15} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onRefresh}
+              title="Refresh Network"
+              className="text-light hover:text-text transition-colors duration-200"
+            >
+              <RefreshCw size={15} />
+            </button>
+            <button
+              onClick={() => setShowSettings(true)}
+              title="Settings"
+              className="text-light hover:text-text transition-colors duration-200"
+            >
+              <Settings size={15} />
+            </button>
+          </div>
         </div>
 
         {localIPs.length === 0 ? (

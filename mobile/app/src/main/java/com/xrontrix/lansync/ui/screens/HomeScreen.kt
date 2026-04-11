@@ -50,7 +50,8 @@ fun HomeScreen(
     isConnecting: Boolean,
     onConnect: (String, (Boolean) -> Unit) -> Unit,
     onDisconnect: () -> Unit,
-    onRemoveRecentDevice: (String) -> Unit
+    onRemoveRecentDevice: (String) -> Unit,
+    onRefreshNetwork: () -> Unit
 ) {
     val focusRequesters = remember { List(4) { FocusRequester() } }
     var ipSegments by remember { mutableStateOf(listOf("", "", "", "")) }
@@ -111,6 +112,10 @@ fun HomeScreen(
                 text = if (isNetworkAvailable) localIP else "No Network",
                 fontSize = 14.sp, color = TextMuted, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold
             )
+            Spacer(modifier = Modifier.width(8.dp))
+            IconButton(onClick = onRefreshNetwork, modifier = Modifier.size(20.dp)) {
+                Icon(painter = painterResource(R.drawable.refresh), contentDescription = "Refresh", tint = TextMuted.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
+            }
         }
 
         // Only push the Disconnected Card to the center of the screen

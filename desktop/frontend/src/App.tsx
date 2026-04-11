@@ -137,6 +137,11 @@ export default function App() {
     GetHomeDir().then(setHomeDir);
     GetSharedDir().then(setSharedDir);
 
+    // Poll Network Every 3 Seconds
+    const networkPoll = setInterval(() => {
+      GetLocalIPs().then(setLocalIPs);
+    }, 3000);
+
     EventsOn("transfer_progress", (progress: TransferProgress) => {
       setActiveTransfers((prev) => ({ ...prev, [progress.id]: progress }));
     });
@@ -210,6 +215,7 @@ export default function App() {
     }
 
     return () => {
+      clearInterval(networkPoll);
       EventsOff("transfer_progress");
       EventsOff("transfer_complete");
       EventsOff("upload_start");
@@ -537,6 +543,7 @@ export default function App() {
           onConnect={connectToDevice}
           onRemoveRecent={removeRecentDevice}
           setShowSettings={setShowSettings}
+          onRefresh={() => GetLocalIPs().then(setLocalIPs)}
         />
 
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden m-2 mt-0 rounded-xl">
