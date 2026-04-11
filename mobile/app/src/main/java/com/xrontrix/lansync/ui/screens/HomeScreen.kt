@@ -50,13 +50,18 @@ fun HomeScreen(
     recentDevices: List<RecentDevice>,
     discoveredDevices: List<com.xrontrix.lansync.viewmodel.DiscoveredDevice>,
     isConnecting: Boolean,
-    onConnect: (String, (Boolean) -> Unit) -> Unit,
+    clearIPInputTrigger: Int,
+    onConnect: (String) -> Unit,
     onDisconnect: () -> Unit,
     onRemoveRecentDevice: (String) -> Unit,
     onRefreshNetwork: () -> Unit
 ) {
     val focusRequesters = remember { List(4) { FocusRequester() } }
     var ipSegments by remember { mutableStateOf(listOf("", "", "", "")) }
+    // Reset IP fields whenever a successful connection fires from ViewModel
+    LaunchedEffect(clearIPInputTrigger) {
+        if (clearIPInputTrigger > 0) ipSegments = listOf("", "", "", "")
+    }
     val isIpComplete = ipSegments.all { it.isNotEmpty() }
     val fullIp = ipSegments.joinToString(".")
 
@@ -142,7 +147,7 @@ fun HomeScreen(
             // ── AVAILABLE DEVICES ──
             val availableToConnect = discoveredDevices.filter { d -> 
                 val connectedName = activeDeviceIP?.let { ip -> recentDevices.find { it.ip == ip }?.name } ?: "Connected Device"
-                d.ip != activeDeviceIP && d.deviceName != connectedName
+                d.ip != localIP && d.ip != activeDeviceIP && d.deviceName != connectedName
             }
             Text("AVAILABLE DEVICES", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp, modifier = Modifier.align(Alignment.Start).padding(start = 4.dp, bottom = 8.dp))
             
@@ -169,7 +174,7 @@ fun HomeScreen(
                         Surface(
                             color = Panel, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Surface),
                             modifier = Modifier.fillMaxWidth().clickable {
-                                onConnect(device.ip) { success -> if (success) ipSegments = listOf("", "", "", "") }
+                                onConnect(device.ip)
                             }
                         ) {
                             Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -179,7 +184,7 @@ fun HomeScreen(
                                     Text(device.deviceName, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                                     Text(device.ip, color = TextMuted.copy(alpha = 0.7f), fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(top = 2.dp))
                                 }
-                                IconButton(onClick = { onConnect(device.ip) { success -> if (success) ipSegments = listOf("", "", "", "") } }, modifier = Modifier.size(32.dp)) {
+                                IconButton(onClick = { onConnect(device.ip) }, modifier = Modifier.size(32.dp)) {
                                     Icon(painter = painterResource(R.drawable.connect), contentDescription = "Connect", tint = Accent, modifier = Modifier.size(18.dp))
                                 }
                             }
@@ -264,9 +269,7 @@ fun HomeScreen(
 
                     Button(
                         onClick = {
-                            onConnect(fullIp) { success ->
-                                if (success) ipSegments = listOf("", "", "", "")
-                            }
+                            onConnect(fullIp)
                         },
                         enabled = isIpComplete && !isConnecting,
                         colors = ButtonDefaults.buttonColors(containerColor = Accent.copy(alpha = 0.15f), contentColor = Accent),
@@ -355,7 +358,7 @@ fun HomeScreen(
                         Surface(
                             color = Panel, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Surface),
                             modifier = Modifier.fillMaxWidth().clickable {
-                                onConnect(device.ip) { success -> if (success) ipSegments = listOf("", "", "", "") }
+                                onConnect(device.ip)
                             }
                         ) {
                             Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {

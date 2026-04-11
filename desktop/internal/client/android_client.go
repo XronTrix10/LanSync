@@ -23,7 +23,6 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// ── CONTEXT-AWARE TRANSFER REGISTRY FOR DESKTOP CLIENT ──
 var (
 	clientTransferMutex   sync.Mutex
 	activeClientTransfers = make(map[string][]context.CancelFunc)
@@ -59,8 +58,6 @@ func (cr *ctxReader) Read(p []byte) (int, error) {
 		return cr.r.Read(p)
 	}
 }
-
-// ────────────────────────────────────────────────────────
 
 type AndroidClient struct {
 	ctx            context.Context
@@ -98,9 +95,16 @@ func (c *AndroidClient) IdentifyDevice(inputIP string) (models.DeviceIdentity, e
 func (c *AndroidClient) RequestConnection(targetIP string, targetPort string, myDeviceName string) (string, error) {
 	tokenForB := c.sessionManager.GenerateToken()
 
+	// Safely assign IP to avoid Index Out Of Bounds
+	ips := sys.GetLocalIPs()
+	myIP := "127.0.0.1"
+	if len(ips) > 0 {
+		myIP = ips[0]
+	}
+
 	reqPayload := models.ConnectionRequest{
 		DeviceIdentity: models.DeviceIdentity{
-			IP:         sys.GetLocalIPs()[0],
+			IP:         myIP,
 			Port:       "34931",
 			DeviceName: myDeviceName,
 			OS:         stdruntime.GOOS,
@@ -182,14 +186,13 @@ func (c *AndroidClient) StreamFileFromAndroid(ip string, port string, path strin
 	params.Add("path", path)
 	baseURL.RawQuery = params.Encode()
 
-	// ── Hook into the Context Registry ──
 	transferCtx, cancelTransfer := context.WithCancel(c.ctx)
 	registerClientTransfer(ip, cancelTransfer)
 	defer cancelTransfer()
 
 	req, _ := http.NewRequestWithContext(transferCtx, "GET", baseURL.String(), nil)
 	req.Header.Set("Authorization", "Bearer "+c.sessionManager.GetOutboundToken(ip))
-	req.Header.Set("Accept-Encoding", "identity") // Ensure no gzip so length is accurate
+	req.Header.Set("Accept-Encoding", "identity")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -207,14 +210,11 @@ func (c *AndroidClient) StreamFileFromAndroid(ip string, port string, path strin
 	}
 
 	tracker := NewProgressTracker(c.ctx, resp.Body, filepath.Base(destPath), resp.ContentLength, "dl")
-
-	// Ensure UI clears the progress bar when done or cancelled
 	defer runtime.EventsEmit(c.ctx, "transfer_complete", tracker.GetID())
 
 	_, copyErr := io.Copy(f, &ctxReader{r: tracker, ctx: transferCtx})
-	f.Close() // Must close before we can remove it
+	f.Close()
 
-	// ── GHOST FILE ROLLBACK ──
 	if copyErr != nil {
 		os.Remove(destPath)
 		if transferCtx.Err() != nil {
@@ -244,12 +244,12 @@ func (c *AndroidClient) PullDirectoryRecursive(ip, port, path, destDir string) e
 			err = c.PullDirectoryRecursive(ip, port, fileMap["path"].(string), destPath)
 			if err != nil {
 				return err
-			} // Bubble up cancellation to stop loop
+			}
 		} else {
 			err = c.StreamFileFromAndroid(ip, port, fileMap["path"].(string), destPath)
 			if err != nil {
 				return err
-			} // Bubble up cancellation to stop loop
+			}
 		}
 	}
 	return nil
@@ -258,7 +258,7 @@ func (c *AndroidClient) PullDirectoryRecursive(ip, port, path, destDir string) e
 func (c *AndroidClient) PushToAndroid(ip, port, targetDir string, filePaths []string) error {
 	for _, path := range filePaths {
 		if err := c.uploadSingleFile(ip, port, targetDir, path); err != nil {
-			return err // Stops subsequent files if cancelled
+			return err
 		}
 	}
 	return nil
@@ -294,7 +294,6 @@ func (c *AndroidClient) uploadSingleFile(ip, port, targetDir, filePath string) e
 	params.Add("name", filepath.Base(filePath))
 	baseURL.RawQuery = params.Encode()
 
-	// ── Hook into the Context Registry ──
 	transferCtx, cancelTransfer := context.WithCancel(c.ctx)
 	registerClientTransfer(ip, cancelTransfer)
 	defer cancelTransfer()
@@ -308,7 +307,6 @@ func (c *AndroidClient) uploadSingleFile(ip, port, targetDir, filePath string) e
 		defer writer.Close()
 		defer runtime.EventsEmit(c.ctx, "transfer_complete", tracker.GetID())
 		part, _ := writer.CreateFormFile("files", filepath.Base(filePath))
-		// Triggers instant halt if Context is aborted
 		io.Copy(part, &ctxReader{r: tracker, ctx: transferCtx})
 	}()
 

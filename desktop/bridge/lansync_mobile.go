@@ -19,6 +19,7 @@ import (
 	"lansync/internal/discovery"
 	"lansync/internal/models"
 	"lansync/internal/server"
+	"lansync/internal/sys"
 
 	_ "golang.org/x/mobile/bind"
 )
@@ -35,9 +36,11 @@ var (
 	currentExposedDir string
 	dirMutex          sync.RWMutex
 
-	// ── Track Custom Download Directory ──
 	currentDownloadDir string
 	dlMutex            sync.RWMutex
+
+	mobileLocalIP string
+	ipMutex       sync.RWMutex
 
 	pendingRequests = make(map[string]chan bool)
 	prMutex         sync.Mutex
@@ -45,32 +48,28 @@ var (
 	cbProxy *androidBridgeProxy
 )
 
-// ── CONTEXT-AWARE TRANSFER REGISTRY ──
 var (
 	transferMutex   sync.Mutex
 	activeTransfers = make(map[string][]context.CancelFunc)
 )
 
-// Registers a cancellable context for a specific IP
 func registerTransfer(ip string, cancel context.CancelFunc) {
 	transferMutex.Lock()
 	activeTransfers[ip] = append(activeTransfers[ip], cancel)
 	transferMutex.Unlock()
 }
 
-// Instantly terminates all active transfers for a specific IP
 func cancelTransfersForIP(ip string) {
 	transferMutex.Lock()
 	if cancels, exists := activeTransfers[ip]; exists {
 		for _, cancel := range cancels {
-			cancel() // This fires the abort signal to io.Copy!
+			cancel()
 		}
 		delete(activeTransfers, ip)
 	}
 	transferMutex.Unlock()
 }
 
-// Wraps a standard io.Reader so it listens for the abort signal
 type ctxReader struct {
 	r   io.Reader
 	ctx context.Context
@@ -79,12 +78,13 @@ type ctxReader struct {
 func (cr *ctxReader) Read(p []byte) (int, error) {
 	select {
 	case <-cr.ctx.Done():
-		return 0, cr.ctx.Err() // Abort instantly if context is cancelled
+		return 0, cr.ctx.Err()
 	default:
 		return cr.r.Read(p)
 	}
 }
 
+// ── Added OnDevicesDiscovered to Interface ──
 type BridgeCallback interface {
 	OnDeviceDropped(ip string)
 	OnClipboardDataReceived(data []byte, contentType string)
@@ -96,6 +96,12 @@ type androidBridgeProxy struct{ cb BridgeCallback }
 
 func (p *androidBridgeProxy) OnClipboardReceived(data []byte, contentType string) {
 	p.cb.OnClipboardDataReceived(data, contentType)
+}
+
+func UpdateLocalIP(ip string) {
+	ipMutex.Lock()
+	mobileLocalIP = ip
+	ipMutex.Unlock()
 }
 
 func StartupWithCallback(cb BridgeCallback) {
@@ -115,12 +121,21 @@ func StartupWithCallback(cb BridgeCallback) {
 
 	go desktopServer.Start("34932")
 
+	// ── DISCOVERY START ──
 	discovery.Start(
 		func() string { return mobileDeviceName },
 		"android",
+		func() []string {
+			ipMutex.RLock()
+			defer ipMutex.RUnlock()
+			if mobileLocalIP != "" {
+				return []string{mobileLocalIP}
+			}
+			return sys.GetLocalIPs() // Fallback
+		},
 		func(devices []discovery.DiscoveredDevice) {
-			jsonBytes, _ := json.Marshal(devices)
 			if cbProxy != nil && cbProxy.cb != nil {
+				jsonBytes, _ := json.Marshal(devices)
 				cbProxy.cb.OnDevicesDiscovered(string(jsonBytes))
 			}
 		},
@@ -135,14 +150,12 @@ func UpdateExposedDir(dir string) {
 	dirMutex.Unlock()
 }
 
-// ── Receive Custom Download Path from Kotlin ──
 func UpdateDownloadDir(dir string) {
 	dlMutex.Lock()
 	currentDownloadDir = dir
 	dlMutex.Unlock()
 }
 
-// ── Correct Singular Download Directory ──
 func getExposedDir() string {
 	dirMutex.RLock()
 	defer dirMutex.RUnlock()
@@ -354,13 +367,12 @@ func StartMobileServer() {
 				return
 			}
 
-			// ── Attach stream to the Transfer Registry ──
 			clientIP, _, _ := net.SplitHostPort(r.RemoteAddr)
 			clientIP = strings.TrimPrefix(clientIP, "::ffff:")
 
 			transferCtx, cancelTransfer := context.WithCancel(r.Context())
 			registerTransfer(clientIP, cancelTransfer)
-			defer cancelTransfer() // Clean up memory when transfer finishes naturally
+			defer cancelTransfer()
 
 			reader, err := r.MultipartReader()
 			if err != nil {
@@ -388,13 +400,11 @@ func StartMobileServer() {
 
 					dst, err := os.Create(filepath.Join(destDir, filename))
 					if err == nil {
-						// Capture the error from io.Copy!
 						_, copyErr := io.Copy(dst, &ctxReader{r: part, ctx: transferCtx})
 						dst.Close()
-						// If the transfer was cancelled or the network dropped mid-byte, delete it!
 						if copyErr != nil {
 							os.Remove(dst.Name())
-							continue // Skip to the next file (if any) or exit
+							continue
 						}
 					}
 				}
@@ -419,9 +429,7 @@ func StartMobileServer() {
 		mux.HandleFunc("/api/files/cancel", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 			clientIP, _, _ := net.SplitHostPort(r.RemoteAddr)
 			clientIP = strings.TrimPrefix(clientIP, "::ffff:")
-			
-			// Triggers the exact same kill sequence as a network drop!
-			cancelTransfersForIP(clientIP) 
+			cancelTransfersForIP(clientIP)
 			w.WriteHeader(http.StatusOK)
 		}))
 

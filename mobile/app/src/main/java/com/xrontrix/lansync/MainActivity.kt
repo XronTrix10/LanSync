@@ -28,11 +28,15 @@ class MainActivity : ComponentActivity() {
             val ip = getLocalIPAddress()
             viewModel.currentLocalIP.value = ip
             viewModel.isNetworkAvailable.value = ip != null
+            if (ip != null) {
+                try { Bridge.updateLocalIP(ip) } catch (e: Exception) {}
+            }
         }
         override fun onLost(network: Network) { 
             val ip = getLocalIPAddress()
             viewModel.currentLocalIP.value = ip
             viewModel.isNetworkAvailable.value = ip != null
+            try { Bridge.updateLocalIP(ip ?: "") } catch (e: Exception) {}
         }
     }
 
@@ -95,8 +99,14 @@ class MainActivity : ComponentActivity() {
         connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val request = NetworkRequest.Builder().build()
         connectivityManager.registerNetworkCallback(request, networkCallback)
-        viewModel.currentLocalIP.value = getLocalIPAddress()
-        viewModel.isNetworkAvailable.value = viewModel.currentLocalIP.value != null
+
+        val ip = getLocalIPAddress()
+        viewModel.currentLocalIP.value = ip
+        viewModel.isNetworkAvailable.value = ip != null
+
+        if (ip != null) {
+            try { Bridge.updateLocalIP(ip) } catch (e: Exception) {}
+        }
     }
 
     private fun checkAndRequestStoragePermissions() {

@@ -47,6 +47,7 @@ func (a *App) startup(ctx context.Context) {
 	discovery.Start(
 		func() string { return config.Load().DeviceName },
 		stdruntime.GOOS,
+		func() []string { return sys.GetLocalIPs() },
 		func(devices []discovery.DiscoveredDevice) {
 			runtime.EventsEmit(a.ctx, "devices_discovered", devices)
 		},

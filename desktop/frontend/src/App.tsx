@@ -27,7 +27,6 @@ import { loadRecentDevices } from "./utils/deviceUtils";
 export default function App() {
   const [os, setOs] = useState("");
   const [localIPs, setLocalIPs] = useState<string[]>(["Loading..."]);
-  const [discoveredDevices, setDiscoveredDevices] = useState<DiscoveredDevice[]>([]);
   const [activeTransfers, setActiveTransfers] = useState<Record<string, TransferProgress>>({});
   const [showSettings, setShowSettings] = useState(false);
   const [deviceName, setDeviceName] = useState("");
@@ -52,6 +51,8 @@ export default function App() {
     pendingRequest,
     recentDevices,
     setRecentDevices,
+    discoveredDevices,
+    setDiscoveredDevices,
     loading: connectionLoading,
     connectToDevice,
     removeRecentDevice,

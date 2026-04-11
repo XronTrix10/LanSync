@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import bridge.Bridge
@@ -48,6 +49,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), B
     val remoteFiles = mutableStateOf<List<FileInfo>>(emptyList())
     val isLoadingFiles = mutableStateOf(false)
     val discoveredDevices = mutableStateOf<List<DiscoveredDevice>>(emptyList())
+    val clearIPInputTrigger = mutableIntStateOf(0)
 
     private lateinit var prefsManager: PreferencesManager
     private lateinit var transferManager: FileTransferManager
@@ -85,6 +87,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), B
                         prefsManager.saveRecentDevice(ip, connectedDeviceName)
                         recentDevicesState.value = prefsManager.getRecentDevices()
                         onToggleForegroundService?.invoke(true)
+                        clearIPInputTrigger.value++
                         Toast.makeText(context, "Connected securely!", Toast.LENGTH_SHORT).show()
                         onResult(true)
                     } else {
@@ -249,8 +252,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application), B
                     )
                 }
                 val myIPs = currentLocalIP.value ?: ""
-                val filteredDevs = devs.filter { it.ip != myIPs }
-                
+                val filteredDevs = devs.filter {
+                    it.ip != myIPs &&
+                            it.ip != "127.0.0.1" &&
+                            !it.ip.startsWith("192.0.0.")
+                }
+
                 runOnUiThread {
                     discoveredDevices.value = filteredDevs
                 }

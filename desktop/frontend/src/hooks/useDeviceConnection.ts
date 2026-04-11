@@ -19,6 +19,7 @@ export function useDeviceConnection(showToast: ShowToast) {
   const [devices, setDevices] = useState<Device[]>([]);
   const [activeDeviceIP, setActiveDeviceIP] = useState<string | null>(null);
   const [newDeviceIP, setNewDeviceIP] = useState<string>("");
+  const [discoveredDevices, setDiscoveredDevices] = useState<any[]>([]);
   const [pendingRequest, setPendingRequest] =
     useState<ConnectionRequest | null>(null);
   const [recentDevices, setRecentDevices] = useState<Device[]>([]);
@@ -128,6 +129,8 @@ export function useDeviceConnection(showToast: ShowToast) {
     setPendingRequest,
     recentDevices,
     setRecentDevices,
+    discoveredDevices,
+    setDiscoveredDevices,
     loading,
     connectToDevice,
     addRecentDevice,

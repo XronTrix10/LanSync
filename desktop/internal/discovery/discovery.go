@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"slices"
 	"sync"
 	"time"
 )
@@ -15,9 +16,9 @@ type DiscoveryPacket struct {
 }
 
 type DiscoveredDevice struct {
-	IP         string `json:"ip"`
-	DeviceName string `json:"deviceName"`
-	OS         string `json:"os"`
+	IP         string    `json:"ip"`
+	DeviceName string    `json:"deviceName"`
+	OS         string    `json:"os"`
 	LastSeen   time.Time `json:"-"`
 }
 
@@ -29,42 +30,62 @@ var (
 
 const discoveryPort = 34933
 
-// Start initializes the UDP background broadcast and listener.
-func Start(getDeviceName func() string, myOS string, onChangeCallback func(devices []DiscoveredDevice)) {
+func Start(getDeviceName func() string, myOS string, getLocalIPs func() []string, onChangeCallback func(devices []DiscoveredDevice)) {
 	onChange = onChangeCallback
 
-	go listenForBroadcasts()
-	go broadcastPresence(getDeviceName, myOS)
+	go listenForBroadcasts(getLocalIPs)
+	go broadcastPresence(getDeviceName, myOS, getLocalIPs)
 	go pruneStaleDevices()
 }
 
-func getBroadcastAddresses() []string {
+func getBroadcastAddresses(getLocalIPs func() []string) []string {
 	var addresses []string
-	interfaces, err := net.Interfaces()
-	if err != nil {
-		return []string{"255.255.255.255"}
+
+	if getLocalIPs != nil {
+		for _, ipStr := range getLocalIPs() {
+			ip := net.ParseIP(ipStr)
+			if ip != nil && ip.To4() != nil {
+				ip4 := ip.To4()
+				bcastIP := make(net.IP, 4)
+				copy(bcastIP, ip4)
+				bcastIP[3] = 255
+				addresses = append(addresses, bcastIP.String())
+			}
+		}
 	}
 
-	for _, iface := range interfaces {
-		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
-			continue
-		}
+	interfaces, err := net.Interfaces()
+	if err == nil {
+		for _, iface := range interfaces {
+			if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
+				continue
+			}
+			addrs, err := iface.Addrs()
+			if err != nil {
+				continue
+			}
+			for _, addr := range addrs {
+				if ipNet, ok := addr.(*net.IPNet); ok && ipNet.IP.To4() != nil {
+					ip := ipNet.IP.To4()
+					mask := ipNet.Mask
+					if len(mask) == 4 {
+						bcastIP := make(net.IP, 4)
+						for i := 0; i < 4; i++ {
+							bcastIP[i] = ip[i] | ^mask[i]
+						}
+						bcastStr := bcastIP.String()
 
-		addrs, err := iface.Addrs()
-		if err != nil {
-			continue
-		}
-
-		for _, addr := range addrs {
-			if ipNet, ok := addr.(*net.IPNet); ok && ipNet.IP.To4() != nil {
-				ip := ipNet.IP.To4()
-				mask := ipNet.Mask
-				if len(mask) == 4 {
-					bcastIP := make(net.IP, 4)
-					for i := 0; i < 4; i++ {
-						bcastIP[i] = ip[i] | ^mask[i]
+						exists := false
+						for _, a := range addresses {
+							if a == bcastStr {
+								exists = true
+								break
+							}
+						}
+						if !exists {
+							addresses = append(addresses, bcastStr)
+						}
 					}
-					addresses = append(addresses, bcastIP.String())
 				}
 			}
 		}
@@ -76,7 +97,7 @@ func getBroadcastAddresses() []string {
 	return addresses
 }
 
-func broadcastPresence(getDeviceName func() string, myOS string) {
+func broadcastPresence(getDeviceName func() string, myOS string, getLocalIPs func() []string) {
 	for {
 		name := getDeviceName()
 		if name != "" {
@@ -85,20 +106,18 @@ func broadcastPresence(getDeviceName func() string, myOS string) {
 				OS:         myOS,
 				Port:       "34931",
 			}
-			
+
 			packetBytes, err := json.Marshal(packet)
 			if err == nil {
-				// We create a fresh connection each loop to handle changing network states gracefully.
 				conn, err := net.ListenPacket("udp4", ":0")
 				if err == nil {
-					bcastAddrs := getBroadcastAddresses()
+					bcastAddrs := getBroadcastAddresses(getLocalIPs)
 					for _, addr := range bcastAddrs {
 						destAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", addr, discoveryPort))
 						if destAddr != nil {
 							conn.WriteTo(packetBytes, destAddr)
 						}
 					}
-					// Also always attempt the global broadcast
 					globalAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("255.255.255.255:%d", discoveryPort))
 					if globalAddr != nil {
 						conn.WriteTo(packetBytes, globalAddr)
@@ -111,18 +130,16 @@ func broadcastPresence(getDeviceName func() string, myOS string) {
 	}
 }
 
-func listenForBroadcasts() {
+func listenForBroadcasts(getLocalIPs func() []string) {
 	addr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("0.0.0.0:%d", discoveryPort))
 	if err != nil {
 		return
 	}
 
-	// Wait, if it fails to bind (e.g. another instance is running), we just quietly crash the listener.
-	// We could retry if network drops and comes back, but let's stick to standard ListenUDP.
 	for {
 		conn, err := net.ListenUDP("udp4", addr)
 		if err != nil {
-			time.Sleep(5 * time.Second) // Retry if port is busy or network stack is initializing
+			time.Sleep(5 * time.Second)
 			continue
 		}
 
@@ -130,18 +147,22 @@ func listenForBroadcasts() {
 		for {
 			n, peer, err := conn.ReadFromUDP(buffer)
 			if err != nil {
-				break // breaks inner loop to re-bind
+				break
 			}
 
 			var packet DiscoveryPacket
 			if err := json.Unmarshal(buffer[:n], &packet); err == nil && packet.DeviceName != "" {
 				ip := peer.IP.String()
 
-				// Determine if we actually changed something to trigger UI state.
+				if getLocalIPs != nil {
+					isSelf := slices.Contains(getLocalIPs(), ip)
+					if isSelf {
+						continue
+					}
+				}
+
 				mu.Lock()
 				d, exists := devices[ip]
-				triggerUpdate := false
-
 				if !exists {
 					devices[ip] = &DiscoveredDevice{
 						IP:         ip,
@@ -149,20 +170,14 @@ func listenForBroadcasts() {
 						OS:         packet.OS,
 						LastSeen:   time.Now(),
 					}
-					triggerUpdate = true
 				} else {
 					d.LastSeen = time.Now()
-					if d.DeviceName != packet.DeviceName || d.OS != packet.OS {
-						d.DeviceName = packet.DeviceName
-						d.OS = packet.OS
-						triggerUpdate = true
-					}
+					d.DeviceName = packet.DeviceName
+					d.OS = packet.OS
 				}
 				mu.Unlock()
 
-				if triggerUpdate {
-					notifyChange()
-				}
+				notifyChange()
 			}
 		}
 		conn.Close()
@@ -194,7 +209,7 @@ func notifyChange() {
 	if onChange == nil {
 		return
 	}
-	
+
 	mu.RLock()
 	var list []DiscoveredDevice
 	for _, dev := range devices {

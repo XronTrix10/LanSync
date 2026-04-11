@@ -1,9 +1,9 @@
 import {
+  Cable,
   History,
   Loader2,
   Monitor,
   MonitorOff,
-  Plus,
   RefreshCw,
   Server,
   Settings,
@@ -87,13 +87,6 @@ export function Sidebar({
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={onRefresh}
-              title="Refresh Network"
-              className="text-light hover:text-text transition-colors duration-200"
-            >
-              <RefreshCw size={15} />
-            </button>
-            <button
               onClick={() => setShowSettings(true)}
               title="Settings"
               className="text-light hover:text-text transition-colors duration-200"
@@ -106,27 +99,45 @@ export function Sidebar({
         {localIPs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-4 bg-red/5 border border-red/20 rounded-lg text-center">
             <WifiOff size={20} className="text-red mb-1.5" />
-            <p className="text-[11px] font-bold text-text">No Network</p>
+            <div className="flex items-center gap-2">
+              <p className="text-[11px] font-bold text-text">No Network</p>
+              <button
+                onClick={onRefresh}
+                title="Refresh Network"
+                className="text-text transition-colors duration-200"
+              >
+                <RefreshCw size={12} />
+              </button>
+            </div>
             <p className="text-[9px] text-light mt-0.5">Please connect to a network</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-1.5 mt-2">
-            {localIPs.map((ip, _index) => (
-              <div
-                key={ip}
-                className="flex items-center gap-2"
-                title={`IP: ${ip}`}
-              >
-                <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold opacity-50" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-gold" />
-                </span>
+          <div className="mt-2 flex items-start justify-between">
+            <div className="flex flex-col gap-1.5">
+              {localIPs.map((ip, _index) => (
+                <div
+                  key={ip}
+                  className="flex items-center gap-2"
+                  title={`IP: ${ip}`}
+                >
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold opacity-50" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-gold" />
+                  </span>
 
-                <span className="text-[11px] font-mono text-light truncate">
-                  {ip}
-                </span>
-              </div>
-            ))}
+                  <span className="text-[11px] font-mono text-light truncate">
+                    {ip}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={onRefresh}
+              title="Refresh Network"
+              className="text-light hover:text-text transition-colors duration-200"
+            >
+              <RefreshCw size={15} />
+            </button>
           </div>
         )}
       </div>
@@ -230,16 +241,16 @@ export function Sidebar({
                 </span>
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-semibold text-text truncate group-hover:text-gold transition-colors duration-200">
+                  <p className="text-[12px] font-semibold text-text truncate group-hover:text-accent transition-colors duration-200">
                     {device.deviceName}
                   </p>
-                  <p className="text-[10px] font-mono text-light truncate">
+                  <p className="text-[10px] font-mono text-dull truncate">
                     {device.ip}
                   </p>
                 </div>
 
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gold/10 p-1 rounded-md">
-                  <Plus size={14} className="text-gold" />
+                <div className="transition-colors duration-200 group-hover:bg-accent/10 p-1 rounded-md">
+                  <Cable size={14} className="text-dull group-hover:text-accent transition-colors duration-200" />
                 </div>
               </div>
             ))}
@@ -275,7 +286,7 @@ export function Sidebar({
             {loading ? (
               <Loader2 size={13} className="animate-spin" />
             ) : (
-              <Plus size={13} />
+              <Cable size={13} />
             )}
             {loading ? "Connecting…" : "Connect"}
           </button>

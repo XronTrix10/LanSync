@@ -174,9 +174,8 @@ fun MainScreen(
                     recentDevices = viewModel.recentDevicesState.value,
                     discoveredDevices = viewModel.discoveredDevices.value,
                     isConnecting = viewModel.isConnecting.value,
-                    onConnect = { ip, onSuccess ->
-                        viewModel.connectToDevice(ip) { success -> onSuccess(success) }
-                    },
+                    clearIPInputTrigger = viewModel.clearIPInputTrigger.value,
+                    onConnect = { ip -> viewModel.connectToDevice(ip) {} },
                     onDisconnect = {
                         viewModel.activeDeviceIP.value?.let { ip -> viewModel.disconnectFromDevice(ip) }
                     },
