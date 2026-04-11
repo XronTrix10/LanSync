@@ -2,17 +2,17 @@ import {
   History,
   Loader2,
   Monitor,
+  MonitorOff,
   Plus,
   RefreshCw,
   Server,
   Settings,
   Smartphone,
-  Wifi,
   WifiOff,
-  X,
+  X
 } from "lucide-react";
-import IPInput from "./IPInput";
 import type { Device, DiscoveredDevice } from "../types";
+import IPInput from "./IPInput";
 
 interface Props {
   localDeviceName: string;
@@ -139,7 +139,7 @@ export function Sidebar({
 
         {devices.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-6 text-dull">
-            <Wifi size={22} strokeWidth={1.5} />
+            <MonitorOff size={22} strokeWidth={1.5} />
             <span className="text-[11px]">No devices connected</span>
           </div>
         ) : (
@@ -206,7 +206,7 @@ export function Sidebar({
         <p className="text-[9px] font-bold tracking-[0.15em] uppercase text-dull px-2 mb-1">
           Available Devices
         </p>
-        
+
         {availableToConnect.length === 0 ? (
           <div className="flex items-center gap-2 px-3 py-2 text-dull">
             <Loader2 size={13} className="animate-spin text-accent" />
