@@ -4,6 +4,8 @@ LANSync is a seamless, cross-platform local network synchronization tool designe
 
 By bypassing the cloud entirely, LANSync utilizes your local Wi-Fi network to achieve maximum transfer speeds with zero data limits, complete privacy, and no external servers.
 
+<center><img src="https://lansync.xrontrix.workers.dev/screenshot.png" width="100%"></center>
+
 ## Features
 
 * **Blazing Fast Transfers:** Maximize your local router's bandwidth. No internet connection required.
