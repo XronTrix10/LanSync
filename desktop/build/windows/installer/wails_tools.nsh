@@ -5,13 +5,13 @@
 !include "FileFunc.nsh"
 
 !ifndef INFO_PROJECTNAME
-    !define INFO_PROJECTNAME "LanSync"
+    !define INFO_PROJECTNAME "LANSync"
 !endif
 !ifndef INFO_COMPANYNAME
-    !define INFO_COMPANYNAME "LanSync"
+    !define INFO_COMPANYNAME "LANSync"
 !endif
 !ifndef INFO_PRODUCTNAME
-    !define INFO_PRODUCTNAME "LanSync"
+    !define INFO_PRODUCTNAME "LANSync"
 !endif
 !ifndef INFO_PRODUCTVERSION
     !define INFO_PRODUCTVERSION "1.0.0"

@@ -10,10 +10,10 @@ import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 
-class LanSyncService : Service() {
+class LANSyncService : Service() {
 
     private var wakeLock: PowerManager.WakeLock? = null
-    private val channelId = "LanSyncConnectionChannel"
+    private val channelId = "LANSyncConnectionChannel"
 
     override fun onCreate() {
         super.onCreate()
@@ -23,7 +23,7 @@ class LanSyncService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // 1. Acquire a WakeLock to keep the CPU running when the screen is off
         val powerManager = getSystemService(POWER_SERVICE) as PowerManager
-        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "LanSync::BackgroundSyncLock")
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "LANSync::BackgroundSyncLock")
         wakeLock?.acquire(30*60*1000L /*30 minutes*/)
 
         // 2. Create the Intent to open the app if the user taps the notification
@@ -33,7 +33,7 @@ class LanSyncService : Service() {
 
         // 3. Build the persistent Foreground Notification
         val notification: Notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("LanSync is Active")
+            .setContentTitle("LANSync is Active")
             .setContentText("File sharing is running in the background")
             .setSmallIcon(R.drawable.folder_outlined)
             .setContentIntent(pendingIntent)
@@ -60,7 +60,7 @@ class LanSyncService : Service() {
     private fun createNotificationChannel() {
         val serviceChannel = NotificationChannel(
             channelId,
-            "LanSync Connection",
+            "LANSync Connection",
             NotificationManager.IMPORTANCE_LOW // Low importance = no sound, just sits in the tray
         )
         val manager = getSystemService(NotificationManager::class.java)

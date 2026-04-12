@@ -1,4 +1,4 @@
-name: Build and Publish LanSync
+name: Build and Publish LANSync
 
 on:
   workflow_dispatch:
@@ -83,7 +83,7 @@ jobs:
       - name: Package Mac App (Preserve Permissions)
         if: runner.os == 'macOS'
         working-directory: ./desktop/build/bin
-        run: zip -qr lansync-${{ matrix.artifact_name }}.zip LanSync.app
+        run: zip -qr lansync-${{ matrix.artifact_name }}.zip LANSync.app
 
       - name: Package Windows Installer
         if: runner.os == 'Windows'
@@ -92,10 +92,10 @@ jobs:
           $installer = Get-ChildItem -Filter "*-installer.exe"
           if ($installer) {
               Rename-Item -Path $installer.FullName -NewName "lansync-setup.exe" -Force
-              Remove-Item -Path "LanSync.exe" -ErrorAction SilentlyContinue
+              Remove-Item -Path "LANSync.exe" -ErrorAction SilentlyContinue
           } else {
               Write-Host "NSIS Installer not found. Using raw executable instead."
-              Rename-Item -Path "LanSync.exe" -NewName "lansync-setup.exe" -Force
+              Rename-Item -Path "LANSync.exe" -NewName "lansync-setup.exe" -Force
           }
 
       - name: Package Linux .deb
@@ -110,7 +110,7 @@ jobs:
           mkdir -p lansync_deb/usr/share/icons/hicolor/512x512/apps
           mkdir -p lansync_deb/DEBIAN
 
-          cp LanSync lansync_deb/usr/bin/lansync
+          cp LANSync lansync_deb/usr/bin/lansync
           chmod +x lansync_deb/usr/bin/lansync
 
           cat <<EOF > lansync_deb/DEBIAN/control
@@ -119,13 +119,13 @@ jobs:
           Section: net
           Priority: optional
           Architecture: amd64
-          Maintainer: LanSync Developer
+          Maintainer: LANSync Developer
           Description: A blazing-fast, cross-platform local network synchronization tool.
           EOF
 
           cat <<EOF > lansync_deb/usr/share/applications/lansync.desktop
           [Desktop Entry]
-          Name=LanSync
+          Name=LANSync
           Comment=Local file and clipboard sync
           Exec=/usr/bin/lansync
           Icon=lansync
@@ -146,7 +146,7 @@ jobs:
             desktop/build/bin/*.exe
             desktop/build/bin/*.zip
             desktop/build/bin/*.deb
-            desktop/build/bin/LanSync
+            desktop/build/bin/LANSync
 
   build-android:
     name: Build Android APK
@@ -234,13 +234,13 @@ jobs:
 
       - name: Prepare Assets for Release
         run: |
-          cd artifacts/linux-amd64 && tar -czvf ../../lansync-linux-amd64.tar.gz LanSync && cd ../../
+          cd artifacts/linux-amd64 && tar -czvf ../../lansync-linux-amd64.tar.gz LANSync && cd ../../
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.event.inputs.version }}
-          name: LanSync ${{ github.event.inputs.version }}
+          name: LANSync ${{ github.event.inputs.version }}
           draft: false
           prerelease: false
           files: |

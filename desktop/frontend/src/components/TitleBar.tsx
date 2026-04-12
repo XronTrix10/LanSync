@@ -57,7 +57,7 @@ export function TitleBar() {
       <div className={`flex items-center gap-1`}>
         <img
           src={logoImage}
-          alt="LanSync Logo"
+          alt="LANSync Logo"
           className="w-5 h-5 object-contain pointer-events-none"
           draggable="false"
         />

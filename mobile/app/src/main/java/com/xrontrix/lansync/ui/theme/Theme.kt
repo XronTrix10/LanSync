@@ -9,7 +9,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val LanSyncColorScheme = darkColorScheme(
+private val LANSyncColorScheme = darkColorScheme(
     background = BgBase,
     surface = Surface,
     surfaceVariant = Panel,
@@ -40,7 +40,7 @@ fun LansyncTheme(
     }
 
     MaterialTheme(
-        colorScheme = LanSyncColorScheme,
+        colorScheme = LANSyncColorScheme,
         typography = Typography,
         content = content
     )

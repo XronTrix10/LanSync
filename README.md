@@ -1,17 +1,17 @@
 # LANSync
 
-LanSync is a seamless, cross-platform local network synchronization tool designed to make sharing files, folders, and clipboard data between your PC and mobile devices instant and effortless. 
+LANSync is a seamless, cross-platform local network synchronization tool designed to make sharing files, folders, and clipboard data between your PC and mobile devices instant and effortless. 
 
-By bypassing the cloud entirely, LanSync utilizes your local Wi-Fi network to achieve maximum transfer speeds with zero data limits, complete privacy, and no external servers.
+By bypassing the cloud entirely, LANSync utilizes your local Wi-Fi network to achieve maximum transfer speeds with zero data limits, complete privacy, and no external servers.
 
 ## Features
 
 * **Blazing Fast Transfers:** Maximize your local router's bandwidth. No internet connection required.
-* **Auto Host Discovery:** Automatically detects other active LanSync devices on your local network—no manual IP configuration needed.
+* **Auto Host Discovery:** Automatically detects other active LANSync devices on your local network—no manual IP configuration needed.
 * **Recursive Folder Sharing:** Instantly sync entire directory trees.
 * **Intuitive Drag & Drop:** Easily drag and drop files and folders directly into the Desktop app for quick sharing. *(Note: Windows currently supports transfers up to 2GB per file).*
 * **Smart Space Checker:** Pre-flight storage validation checks the receiving device's available space before initiating a transfer, preventing crashes and corrupted disks.
-* **Transfer Cancellations:** Instantly cancel active uploads or downloads. LanSync automatically rolls back and cleans up any partially transferred files.
+* **Transfer Cancellations:** Instantly cancel active uploads or downloads. LANSync automatically rolls back and cleans up any partially transferred files.
 * **Clipboard Sync:** Seamlessly copy text on your PC and paste it on your phone (and vice-versa) with a single click.
 * **Secure Peer-to-Peer:** Custom token-based authentication and connection request modals ensure no one accesses your files without explicit permission.
 * **True Background Execution:** The Android app utilizes a lightweight Foreground Service and Partial WakeLocks, ensuring transfers never drop when your screen turns off.
@@ -19,7 +19,7 @@ By bypassing the cloud entirely, LanSync utilizes your local Wi-Fi network to ac
 
 ## Tech Stack
 
-LanSync is built using a modern, hybrid architecture to ensure maximum performance and a beautiful native feel across all devices.
+LANSync is built using a modern, hybrid architecture to ensure maximum performance and a beautiful native feel across all devices.
 
 **Desktop Client**
 * **Core:** [Wails v2](https://wails.io/) (Go)
@@ -42,12 +42,12 @@ Download the latest release for your platform from the Releases page and follow 
 
 ### macOS
 1. Download and extract the `lansync-macos.zip` file.
-2. Move the extracted `LanSync.app` to your Applications folder.
+2. Move the extracted `LANSync.app` to your Applications folder.
 3. To bypass the macOS "unidentified developer" quarantine, open your Terminal and run the following command:
    ```bash
-   xattr -cr /Applications/LanSync.app
+   xattr -cr /Applications/LANSync.app
    ```
-   *(If you left the app in your Downloads folder, run `xattr -cr ~/Downloads/LanSync.app` instead).*
+   *(If you left the app in your Downloads folder, run `xattr -cr ~/Downloads/LANSync.app` instead).*
 4. Double-click to open the app.
 
 ### Linux (Ubuntu/Debian)
@@ -105,4 +105,4 @@ Before compiling, ensure your development environment is fully set up for Androi
 
 ## How it Works
 
-LanSync operates on a dual-server architecture. When devices pair, they exchange temporary cryptographic bearer tokens. Both the Desktop and Mobile apps spin up lightweight Go HTTP servers (defaulting to port `34931`) to handle bidirectional streaming. The Android app leverages a custom threaded download engine to bypass OS-level HTTP restrictions, providing real-time speed and progress metrics directly in the notification tray.
+LANSync operates on a dual-server architecture. When devices pair, they exchange temporary cryptographic bearer tokens. Both the Desktop and Mobile apps spin up lightweight Go HTTP servers (defaulting to port `34931`) to handle bidirectional streaming. The Android app leverages a custom threaded download engine to bypass OS-level HTTP restrictions, providing real-time speed and progress metrics directly in the notification tray.

@@ -139,7 +139,7 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     Text("Network Disconnected", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Please connect to a network to use LanSync.", color = TextMuted, textAlign = TextAlign.Center, fontSize = 13.sp)
+                    Text("Please connect to a network to use LANSync.", color = TextMuted, textAlign = TextAlign.Center, fontSize = 13.sp)
                 }
             }
         } else {

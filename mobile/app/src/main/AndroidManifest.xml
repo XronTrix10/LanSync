@@ -36,7 +36,7 @@
             </intent-filter>
         </activity>
         <service
-            android:name=".LanSyncService"
+            android:name=".LANSyncService"
             android:foregroundServiceType="dataSync"
             android:exported="false" />
     </application>

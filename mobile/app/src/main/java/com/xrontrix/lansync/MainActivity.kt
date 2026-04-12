@@ -52,7 +52,7 @@ class MainActivity : ComponentActivity() {
         viewModel.initialize(prefsManager, transferManager)
 
         viewModel.onToggleForegroundService = { start ->
-            val serviceIntent = Intent(this, LanSyncService::class.java)
+            val serviceIntent = Intent(this, LANSyncService::class.java)
             if (start) {
                 startForegroundService(serviceIntent)
             } else {

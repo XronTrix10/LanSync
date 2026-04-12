@@ -270,7 +270,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), B
             val text = String(data, Charsets.UTF_8)
             val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
             runOnUiThread {
-                clipboardManager.setPrimaryClip(android.content.ClipData.newPlainText("LanSync", text))
+                clipboardManager.setPrimaryClip(android.content.ClipData.newPlainText("LANSync", text))
                 Toast.makeText(context, "Device text copied!", Toast.LENGTH_SHORT).show()
             }
         }
