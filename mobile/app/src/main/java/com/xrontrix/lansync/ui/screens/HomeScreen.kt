@@ -19,7 +19,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.*
@@ -73,8 +72,8 @@ fun HomeScreen(
 
         Text(
             text = buildAnnotatedString {
-                withStyle(style = SpanStyle(color = Color(0xFF6E6E6E))) { append("LAN") }
-                withStyle(style = SpanStyle(color = LightAccent)) { append("Sync") }
+                withStyle(style = SpanStyle(color = Accent)) { append("LAN") }
+                withStyle(style = SpanStyle(color = TextPrimary)) { append("Sync") }
             },
             fontSize = 28.sp, fontWeight = FontWeight.Black, letterSpacing = 4.sp
         )

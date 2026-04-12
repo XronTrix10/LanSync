@@ -47,9 +47,8 @@ export function TitleBar() {
 
   return (
     <div
-      className={`h-8 w-full bg-bg-base flex items-center shrink-0 select-none border-border relative transition-all ${
-        isMac && !isFullscreen ? "pl-20 justify-start" : "pl-6 justify-between"
-      }`}
+      className={`h-8 w-full bg-bg-base flex items-center shrink-0 select-none border-border relative transition-all ${isMac && !isFullscreen ? "pl-20 justify-start" : "pl-6 justify-between"
+        }`}
       data-wails-drag
       style={{ "--wails-draggable": "drag" } as any}
       onDoubleClick={WindowToggleMaximise}
@@ -62,9 +61,9 @@ export function TitleBar() {
           className="w-5 h-5 object-contain pointer-events-none"
           draggable="false"
         />
-        <div className="text-md font-black tracking-widest">
-          <span className="text-dull">LAN</span>
-          <span className="text-light">Sync</span>
+        <div className="text-md font-black tracking-[0.12em] leading-[.93]">
+          <span className="text-accent">LAN</span>
+          <span className="text-text">Sync</span>
         </div>
       </div>
 
