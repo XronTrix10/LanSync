@@ -206,32 +206,22 @@ jobs:
         working-directory: ./mobile
         run: chmod +x ./gradlew
 
-      - name: Setup Release Keystore
-        working-directory: ./mobile
-        env:
-          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          # 1. Decode the Base64 string back into the .jks file
-          echo "$KEYSTORE_B64" | base64 --decode > app/lansync-release-key.jks
-          
-          # 2. Reconstruct the local.properties file for Gradle
-          cat <<EOF > local.properties
-          KEYSTORE_FILE=lansync-release-key.jks
-          KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD
-          KEY_ALIAS=$KEY_ALIAS
-          KEY_PASSWORD=$KEY_PASSWORD
-          EOF
-
       - name: Build Release APK
         working-directory: ./mobile
         run: ./gradlew assembleRelease
 
+      - name: Sign APK
+        uses: r0adkll/sign-android-release@v1
+        id: sign_app
+        with:
+          releaseDirectory: mobile/app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.KEYSTORE_B64 }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
       - name: Rename APK
-        working-directory: ./mobile/app/build/outputs/apk/release
-        run: mv *.apk lansync_release.apk
+        run: mv ${{steps.sign_app.outputs.signedReleaseFile}} mobile/app/build/outputs/apk/release/lansync_release.apk
 
       - name: Upload Android Artifact
         uses: actions/upload-artifact@v4
