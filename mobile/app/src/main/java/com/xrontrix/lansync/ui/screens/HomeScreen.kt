@@ -356,7 +356,7 @@ fun HomeScreen(
                     items(filteredRecent) { device ->
                         Surface(
                             color = Panel, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Surface),
-                            modifier = Modifier.fillMaxWidth().clickable {
+                            modifier = Modifier.fillMaxWidth().clickable(enabled = isNetworkAvailable) {
                                 onConnect(device.ip)
                             }
                         ) {

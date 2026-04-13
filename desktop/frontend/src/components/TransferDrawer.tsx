@@ -1,6 +1,6 @@
 import { ArrowDownToLine, Clock, Zap, XCircle } from "lucide-react";
 import type { TransferProgress } from "../types";
-import { formatETA } from "../types";
+import { formatETA, formatSize } from "../types";
 
 interface Props {
   transfers: Record<string, TransferProgress>;
@@ -72,8 +72,7 @@ export function TransferDrawer({ transfers, onCancelAll }: Props) {
                 {formatETA(t.etaSeconds)}
               </span>
               <span className="text-[10px] font-mono text-dull ml-auto tabular-nums">
-                {(t.transferred / 1024 / 1024).toFixed(1)} /{" "}
-                {(t.total / 1024 / 1024).toFixed(1)} MB
+                {formatSize(t.transferred)} / {formatSize(t.total)}
               </span>
             </div>
           </div>

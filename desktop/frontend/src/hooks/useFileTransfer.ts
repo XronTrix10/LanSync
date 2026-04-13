@@ -11,6 +11,7 @@ import {
   SelectFiles,
   ShareClipboardText,
 } from "../../wailsjs/go/main/App";
+import { EventsEmit } from "../../wailsjs/runtime/runtime";
 import type { Device, FileInfo } from "../types";
 import { getBaseDirName } from "../utils/pathUtils";
 
@@ -73,7 +74,11 @@ export function useFileTransfer(
           ? await DownloadFolder(targetIP, port, file.path)
           : await DownloadFile(targetIP, port, file.path);
         if (savedPath) {
-          showToast(`Successfully downloaded: ${file.name}`, "success", savedPath);
+          showToast(
+            `Successfully downloaded: ${file.name}`,
+            "success",
+            savedPath,
+          );
         }
       } catch (err: any) {
         const msg = err.message || String(err);
@@ -94,7 +99,12 @@ export function useFileTransfer(
     try {
       const selectedFiles = await SelectFiles();
       if (!selectedFiles || selectedFiles.length === 0) return;
-      await PushToAndroid(targetIP, getActivePort(targetIP), path, selectedFiles);
+      await PushToAndroid(
+        targetIP,
+        getActivePort(targetIP),
+        path,
+        selectedFiles,
+      );
       navigateTo(path, targetIP);
       showToast(
         `${selectedFiles.length} file(s) successfully uploaded`,
@@ -118,9 +128,18 @@ export function useFileTransfer(
     try {
       const selectedFolder = await SelectDirectory();
       if (!selectedFolder) return;
-      await PushFolderToAndroid(targetIP, getActivePort(targetIP), path, selectedFolder);
+      await PushFolderToAndroid(
+        targetIP,
+        getActivePort(targetIP),
+        path,
+        selectedFolder,
+      );
       navigateTo(path, targetIP);
-      showToast("Folder successfully uploaded", "success", getBaseDirName(path));
+      showToast(
+        "Folder successfully uploaded",
+        "success",
+        getBaseDirName(path),
+      );
     } catch (err: any) {
       const msg = err.message || String(err);
       if (msg.toLowerCase().includes("cancelled")) {
@@ -138,11 +157,23 @@ export function useFileTransfer(
       if (!targetIP || !folderName.trim()) return;
       setLoading(true);
       try {
-        await MakeDirectory(targetIP, getActivePort(targetIP), path, folderName.trim());
+        await MakeDirectory(
+          targetIP,
+          getActivePort(targetIP),
+          path,
+          folderName.trim(),
+        );
         navigateTo(path, targetIP);
-        showToast(`Folder "${folderName}" created`, "success", getBaseDirName(path));
+        showToast(
+          `Folder "${folderName}" created`,
+          "success",
+          getBaseDirName(path),
+        );
       } catch (err: any) {
-        showToast(`Failed to create folder: ${err.message || String(err)}`, "error");
+        showToast(
+          `Failed to create folder: ${err.message || String(err)}`,
+          "error",
+        );
       } finally {
         setLoading(false);
       }
@@ -150,6 +181,7 @@ export function useFileTransfer(
     [activeDeviceIPRef, currentPathRef, getActivePort, navigateTo, showToast],
   );
 
+  // ── UPDATED: XHR Implementation to broadcast progress to Wails Events ──
   const handleHtmlDropUpload = useCallback(
     async (droppedFiles: File[]) => {
       const targetIP = activeDeviceIPRef.current;
@@ -160,6 +192,7 @@ export function useFileTransfer(
       lastDropTime.current = Date.now();
       setUploading(true);
       let successCount = 0;
+
       try {
         const token = await GetSessionToken(targetIP);
         if (!token) throw new Error("Session expired. Please reconnect.");
@@ -168,16 +201,74 @@ export function useFileTransfer(
         for (const file of droppedFiles) {
           const formData = new FormData();
           formData.append("files", file);
-          const res = await fetch(
-            `http://${targetIP}:${port}/api/files/upload?dir=${encodeURIComponent(path)}&name=${encodeURIComponent(file.name)}`,
-            {
-              method: "POST",
-              headers: { Authorization: `Bearer ${token}` },
-              body: formData,
-            },
-          );
-          if (res.ok) successCount++;
-          else throw new Error("Server rejected the file.");
+
+          // Generate a unique ID for the transfer drawer
+          const fileId = `ul-html-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9]/g, "")}`;
+
+          await new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open(
+              "POST",
+              `http://${targetIP}:${port}/api/files/upload?dir=${encodeURIComponent(path)}&name=${encodeURIComponent(file.name)}`,
+            );
+            xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+
+            let lastLoaded = 0;
+            let lastTime = Date.now();
+            let currentSpeed = 0;
+
+            EventsEmit("upload_start");
+
+            // Attach to the upload progress stream
+            xhr.upload.onprogress = (event) => {
+              if (event.lengthComputable) {
+                const now = Date.now();
+                const timeDiff = (now - lastTime) / 1000;
+
+                // Update speed calculation every 500ms
+                if (timeDiff > 0.5) {
+                  currentSpeed = (event.loaded - lastLoaded) / timeDiff;
+                  lastLoaded = event.loaded;
+                  lastTime = now;
+                }
+
+                // Proxy the progress into the Wails event bus for the drawer
+                EventsEmit("transfer_progress", {
+                  id: fileId,
+                  fileName: file.name,
+                  totalSize: event.total,
+                  transferred: event.loaded,
+                  percentage: parseFloat(
+                    ((event.loaded / event.total) * 100).toFixed(1),
+                  ),
+                  speed: currentSpeed,
+                  type: "ul",
+                });
+              }
+            };
+
+            xhr.onload = () => {
+              EventsEmit("transfer_complete", fileId);
+              if (xhr.status >= 200 && xhr.status < 300) {
+                successCount++;
+                resolve();
+              } else {
+                reject(new Error(`Server rejected the file: ${file.name}`));
+              }
+            };
+
+            xhr.onerror = () => {
+              EventsEmit("transfer_complete", fileId);
+              reject(new Error(`Network error uploading: ${file.name}`));
+            };
+
+            xhr.onabort = () => {
+              EventsEmit("transfer_complete", fileId);
+              reject(new Error("Upload cancelled."));
+            };
+
+            xhr.send(formData);
+          });
         }
 
         navigateTo(path, targetIP);
@@ -189,10 +280,18 @@ export function useFileTransfer(
       } catch (err: any) {
         showToast(`Drop upload failed: ${err.message || String(err)}`, "error");
       } finally {
+        EventsEmit("upload_complete");
         setUploading(false);
       }
     },
-    [activeDeviceIPRef, currentPathRef, osRef, getActivePort, navigateTo, showToast],
+    [
+      activeDeviceIPRef,
+      currentPathRef,
+      osRef,
+      getActivePort,
+      navigateTo,
+      showToast,
+    ],
   );
 
   const handleShareClipboard = useCallback(async () => {
@@ -203,7 +302,10 @@ export function useFileTransfer(
       await ShareClipboardText(targetIP, getActivePort(targetIP));
       showToast("Desktop clipboard sent to device", "success");
     } catch (err: any) {
-      showToast(`Clipboard share failed: ${err.message || String(err)}`, "error");
+      showToast(
+        `Clipboard share failed: ${err.message || String(err)}`,
+        "error",
+      );
     } finally {
       setLoading(false);
     }
@@ -235,7 +337,14 @@ export function useFileTransfer(
         setUploading(false);
       }
     },
-    [activeDeviceIPRef, currentPathRef, osRef, getActivePort, navigateTo, showToast],
+    [
+      activeDeviceIPRef,
+      currentPathRef,
+      osRef,
+      getActivePort,
+      navigateTo,
+      showToast,
+    ],
   );
 
   return {
