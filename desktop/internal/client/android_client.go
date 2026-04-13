@@ -175,7 +175,7 @@ func (c *AndroidClient) GetRemoteFiles(targetIP string, targetPort string, targe
 		return nil, fmt.Errorf("unauthorized")
 	}
 
-	var result map[string]interface{}
+	var result map[string]any
 	json.NewDecoder(resp.Body).Decode(&result)
 	return result, nil
 }

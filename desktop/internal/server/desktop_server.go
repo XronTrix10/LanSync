@@ -170,7 +170,11 @@ func (s *DesktopServer) handleConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientIP, _, _ := net.SplitHostPort(r.RemoteAddr)
+	clientIP, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		clientIP = r.RemoteAddr
+	}
+	clientIP = strings.TrimPrefix(clientIP, "::ffff:")
 	if clientIP == "::1" {
 		clientIP = "127.0.0.1"
 	}
@@ -226,16 +230,26 @@ func (s *DesktopServer) handleDisconnect(w http.ResponseWriter, r *http.Request)
 		clientIP = r.RemoteAddr
 	}
 	clientIP = strings.TrimPrefix(clientIP, "::ffff:")
+	if clientIP == "::1" {
+		clientIP = "127.0.0.1"
+	}
 
-	CancelTransfersForIP(clientIP) // Kills transfers before closing session
+	CancelTransfersForIP(clientIP)
 	s.sessionManager.RemoveSession(clientIP)
 	runtime.EventsEmit(s.ctx, "connection_lost", clientIP)
 	w.WriteHeader(http.StatusOK)
 }
 
 func (s *DesktopServer) handleCancel(w http.ResponseWriter, r *http.Request) {
-	clientIP, _, _ := net.SplitHostPort(r.RemoteAddr)
+	clientIP, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		clientIP = r.RemoteAddr
+	}
 	clientIP = strings.TrimPrefix(clientIP, "::ffff:")
+	if clientIP == "::1" {
+		clientIP = "127.0.0.1"
+	}
+
 	CancelTransfersForIP(clientIP)
 	w.WriteHeader(http.StatusOK)
 }
@@ -322,7 +336,11 @@ func (s *DesktopServer) handleDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	f, _ := os.Open(absPhysical)
+	f, err := os.Open(absPhysical)
+	if err != nil {
+		http.Error(w, "Cannot read file", http.StatusInternalServerError)
+		return
+	}
 	defer f.Close()
 
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filepath.Base(absPhysical)))
@@ -330,7 +348,6 @@ func (s *DesktopServer) handleDownload(w http.ResponseWriter, r *http.Request) {
 	http.ServeContent(w, r, filepath.Base(absPhysical), info.ModTime(), f)
 }
 
-// ── STREAMING, MEMORY FIX, AND ROLLBACK ──
 func (s *DesktopServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 	absPhysical, _, err := s.resolvePath(r.URL.Query().Get("dir"))
 	if err != nil {
@@ -340,15 +357,19 @@ func (s *DesktopServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 
 	os.MkdirAll(absPhysical, 0755)
 
-	clientIP, _, _ := net.SplitHostPort(r.RemoteAddr)
+	clientIP, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		clientIP = r.RemoteAddr
+	}
 	clientIP = strings.TrimPrefix(clientIP, "::ffff:")
+	if clientIP == "::1" {
+		clientIP = "127.0.0.1"
+	}
 
-	// Attach this upload stream to the registry
 	transferCtx, cancelTransfer := context.WithCancel(r.Context())
 	registerTransfer(clientIP, cancelTransfer)
 	defer cancelTransfer()
 
-	// Stream directly to avoid 1.5GB RAM crash
 	reader, err := r.MultipartReader()
 	if err != nil {
 		http.Error(w, "Failed to read multipart stream", http.StatusBadRequest)
@@ -365,18 +386,16 @@ func (s *DesktopServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if part.FormName() == "files" {
-			filename := part.FileName()
-			if filename == "" {
+			filename := filepath.Base(part.FileName())
+			if filename == "" || filename == "." || filename == "/" {
 				continue
 			}
 
 			dst, err := os.Create(filepath.Join(absPhysical, filename))
 			if err == nil {
-				// Use Context-Aware Reader
 				_, copyErr := io.Copy(dst, &ctxReader{r: part, ctx: transferCtx})
 				dst.Close()
 
-				// Delete ghost file if transfer is cancelled or drops!
 				if copyErr != nil {
 					os.Remove(dst.Name())
 					continue
@@ -396,8 +415,8 @@ func (s *DesktopServer) handleMkdir(w http.ResponseWriter, r *http.Request) {
 	}
 
 	folderName := r.URL.Query().Get("name")
-	if folderName == "" {
-		http.Error(w, "Name required", http.StatusBadRequest)
+	if folderName == "" || strings.ContainsAny(folderName, "/\\") || strings.Contains(folderName, "..") {
+		http.Error(w, "Invalid folder name", http.StatusBadRequest)
 		return
 	}
 

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, type RefObject } from "react";
 import {
   DownloadFile,
   DownloadFolder,
@@ -23,9 +23,9 @@ type ShowToast = (
 
 export function useFileTransfer(
   devices: Device[],
-  activeDeviceIPRef: React.MutableRefObject<string | null>,
-  currentPathRef: React.MutableRefObject<string>,
-  osRef: React.MutableRefObject<string>,
+  activeDeviceIPRef: RefObject<string | null>,
+  currentPathRef: RefObject<string>,
+  osRef: RefObject<string>,
   showToast: ShowToast,
 ) {
   const [currentPath, setCurrentPath] = useState("/");

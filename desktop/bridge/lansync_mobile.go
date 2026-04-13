@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -84,7 +85,6 @@ func (cr *ctxReader) Read(p []byte) (int, error) {
 	}
 }
 
-// ── Added OnDevicesDiscovered to Interface ──
 type BridgeCallback interface {
 	OnDeviceDropped(ip string)
 	OnClipboardDataReceived(data []byte, contentType string)
@@ -193,9 +193,11 @@ func DisconnectDevice(ip string) {
 }
 
 func GetSessionToken(ip string) string { return sessionManager.GetOutboundToken(ip) }
+
 func ShareMobileClipboard(ip string, port string, data []byte, contentType string) error {
 	return clipboardManager.ShareMobileData(ip, port, data, contentType)
 }
+
 func GetRemoteFilesJson(ip string, port string, path string) (string, error) {
 	result, err := androidClient.GetRemoteFiles(ip, port, path)
 	if err != nil {
@@ -204,8 +206,23 @@ func GetRemoteFilesJson(ip string, port string, path string) (string, error) {
 	jsonBytes, err := json.Marshal(result)
 	return string(jsonBytes), err
 }
+
 func MakeDirectory(ip string, port string, dir string, name string) error {
 	return androidClient.MakeDirectory(ip, port, dir, name)
+}
+
+func resolveMobilePath(reqPath string) (string, string, error) {
+	if reqPath == "" {
+		reqPath = "/"
+	}
+	cleanVirtual := filepath.Clean("/" + reqPath)
+	baseDir := getExposedDir()
+	absPhysical := filepath.Join(baseDir, cleanVirtual)
+
+	if !strings.HasPrefix(absPhysical, baseDir) {
+		return "", "", fmt.Errorf("path traversal denied")
+	}
+	return absPhysical, cleanVirtual, nil
 }
 
 func StartMobileServer() {
@@ -304,8 +321,16 @@ func StartMobileServer() {
 		mux.HandleFunc("/api/ping", authMiddleware(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }))
 
 		mux.HandleFunc("/api/disconnect", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
-			clientIP, _, _ := net.SplitHostPort(r.RemoteAddr)
+			clientIP, _, err := net.SplitHostPort(r.RemoteAddr)
+			if err != nil {
+				clientIP = r.RemoteAddr
+			}
 			clientIP = strings.TrimPrefix(clientIP, "::ffff:")
+			if clientIP == "::1" {
+				clientIP = "127.0.0.1"
+			}
+
+			cancelTransfersForIP(clientIP)
 			sessionManager.RemoveSession(clientIP)
 			if cbProxy != nil && cbProxy.cb != nil {
 				cbProxy.cb.OnDeviceDropped(clientIP)
@@ -315,60 +340,109 @@ func StartMobileServer() {
 
 		mux.HandleFunc("/api/files/list", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
-			requestedPath := r.URL.Query().Get("path")
-			if requestedPath == "/" {
-				requestedPath = ""
-			}
-			if strings.Contains(requestedPath, "..") {
+
+			absPhysical, cleanVirtual, err := resolveMobilePath(r.URL.Query().Get("path"))
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
 
-			fullPath := filepath.Join(getExposedDir(), requestedPath)
-			entries, err := os.ReadDir(fullPath)
+			entries, err := os.ReadDir(absPhysical)
 			if err != nil {
-				json.NewEncoder(w).Encode(map[string]interface{}{"path": requestedPath, "parent": filepath.Dir(requestedPath), "files": []models.FileInfo{}})
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"path":   cleanVirtual,
+					"parent": filepath.Dir(cleanVirtual),
+					"files":  []models.FileInfo{},
+				})
 				return
 			}
 
 			var files []models.FileInfo
-			for _, e := range entries {
-				info, err := e.Info()
+			for _, entry := range entries {
+				// Hide Android system dotfiles
+				if strings.HasPrefix(entry.Name(), ".") {
+					continue
+				}
+
+				info, err := entry.Info()
 				if err != nil {
 					continue
 				}
-				relPath := e.Name()
-				if requestedPath != "" {
-					relPath = requestedPath + "/" + e.Name()
-				}
-				files = append(files, models.FileInfo{Name: e.Name(), Path: relPath, Size: info.Size(), IsDir: e.IsDir(), ModTime: info.ModTime().Format("2006-01-02 15:04")})
+
+				relPath := filepath.ToSlash(filepath.Join(cleanVirtual, entry.Name()))
+
+				files = append(files, models.FileInfo{
+					Name:    entry.Name(),
+					Path:    relPath,
+					Size:    info.Size(),
+					IsDir:   entry.IsDir(),
+					ModTime: info.ModTime().Format("2006-01-02 15:04"),
+				})
 			}
-			parent := filepath.Dir(requestedPath)
-			if requestedPath == "" {
+
+			// Sort correctly (Folders first, then A-Z)
+			sort.Slice(files, func(i, j int) bool {
+				if files[i].IsDir != files[j].IsDir {
+					return files[i].IsDir
+				}
+				return strings.ToLower(files[i].Name) < strings.ToLower(files[j].Name)
+			})
+
+			parent := filepath.Dir(cleanVirtual)
+			if cleanVirtual == "/" {
 				parent = ""
 			}
 			if files == nil {
 				files = []models.FileInfo{}
 			}
-			json.NewEncoder(w).Encode(map[string]interface{}{"path": requestedPath, "parent": parent, "files": files})
+
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"path":   cleanVirtual,
+				"parent": parent,
+				"files":  files,
+			})
 		}))
 
 		mux.HandleFunc("/api/files/download", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
-			requestedPath := r.URL.Query().Get("path")
-			if strings.Contains(requestedPath, "..") {
+			absPhysical, _, err := resolveMobilePath(r.URL.Query().Get("path"))
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			http.ServeFile(w, r, filepath.Join(getExposedDir(), requestedPath))
+
+			info, err := os.Stat(absPhysical)
+			if err != nil || info.IsDir() {
+				http.Error(w, "File not found", http.StatusNotFound)
+				return
+			}
+
+			f, err := os.Open(absPhysical)
+			if err != nil {
+				http.Error(w, "Cannot read file", http.StatusInternalServerError)
+				return
+			}
+			defer f.Close()
+
+			w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filepath.Base(absPhysical)))
+			w.Header().Set("Content-Type", "application/octet-stream")
+			http.ServeContent(w, r, filepath.Base(absPhysical), info.ModTime(), f)
 		}))
 
 		mux.HandleFunc("/api/files/upload", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
-			dir := r.URL.Query().Get("dir")
-			if strings.Contains(dir, "..") {
-				http.Error(w, "Invalid directory", http.StatusBadRequest)
+			absPhysical, _, err := resolveMobilePath(r.URL.Query().Get("dir"))
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
 
-			clientIP, _, _ := net.SplitHostPort(r.RemoteAddr)
+			clientIP, _, err := net.SplitHostPort(r.RemoteAddr)
+			if err != nil {
+				clientIP = r.RemoteAddr
+			}
 			clientIP = strings.TrimPrefix(clientIP, "::ffff:")
+			if clientIP == "::1" {
+				clientIP = "127.0.0.1"
+			}
 
 			transferCtx, cancelTransfer := context.WithCancel(r.Context())
 			registerTransfer(clientIP, cancelTransfer)
@@ -380,8 +454,7 @@ func StartMobileServer() {
 				return
 			}
 
-			destDir := filepath.Join(getExposedDir(), dir)
-			os.MkdirAll(destDir, 0755)
+			os.MkdirAll(absPhysical, 0755)
 
 			for {
 				part, err := reader.NextPart()
@@ -393,12 +466,12 @@ func StartMobileServer() {
 				}
 
 				if part.FormName() == "files" {
-					filename := part.FileName()
-					if filename == "" {
+					filename := filepath.Base(part.FileName()) // Strip malicious traversal attempts
+					if filename == "" || filename == "." || filename == "/" {
 						continue
 					}
 
-					dst, err := os.Create(filepath.Join(destDir, filename))
+					dst, err := os.Create(filepath.Join(absPhysical, filename))
 					if err == nil {
 						_, copyErr := io.Copy(dst, &ctxReader{r: part, ctx: transferCtx})
 						dst.Close()
@@ -413,12 +486,19 @@ func StartMobileServer() {
 		}))
 
 		mux.HandleFunc("/api/files/mkdir", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
-			dir := r.URL.Query().Get("dir")
-			name := r.URL.Query().Get("name")
-			if strings.Contains(dir, "..") || strings.Contains(name, "..") {
+			absPhysical, _, err := resolveMobilePath(r.URL.Query().Get("dir"))
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			os.MkdirAll(filepath.Join(getExposedDir(), dir, name), 0755)
+
+			name := r.URL.Query().Get("name")
+			if name == "" || strings.ContainsAny(name, "/\\") || strings.Contains(name, "..") {
+				http.Error(w, "Invalid directory name", http.StatusBadRequest)
+				return
+			}
+
+			os.MkdirAll(filepath.Join(absPhysical, name), 0755)
 			w.WriteHeader(http.StatusOK)
 		}))
 
@@ -427,8 +507,15 @@ func StartMobileServer() {
 		}))
 
 		mux.HandleFunc("/api/files/cancel", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
-			clientIP, _, _ := net.SplitHostPort(r.RemoteAddr)
+			clientIP, _, err := net.SplitHostPort(r.RemoteAddr)
+			if err != nil {
+				clientIP = r.RemoteAddr
+			}
 			clientIP = strings.TrimPrefix(clientIP, "::ffff:")
+			if clientIP == "::1" {
+				clientIP = "127.0.0.1"
+			}
+
 			cancelTransfersForIP(clientIP)
 			w.WriteHeader(http.StatusOK)
 		}))
