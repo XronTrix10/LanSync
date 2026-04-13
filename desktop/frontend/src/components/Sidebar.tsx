@@ -231,9 +231,12 @@ export function Sidebar({
 
       {/* ── Available Devices ── */}
       <div className="px-3 pb-3 rounded-xl bg-surface pt-3 flex flex-col gap-2">
-        <p className="text-[9px] font-bold tracking-[0.15em] uppercase text-dull px-2 mb-1">
-          Available Devices
-        </p>
+        <div className="flex items-center gap-1 mb-1">
+          <p className="text-[9px] font-bold tracking-[0.15em] uppercase text-dull px-2">
+            Available Devices
+          </p>
+          {availableToConnect.length > 0 ? <Loader2 size={13} className="animate-spin text-dull" /> : null}
+        </div>
 
         {availableToConnect.length === 0 ? (
           <div className="flex items-center gap-2 px-3 py-2 text-dull">
